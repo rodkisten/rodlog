@@ -41,7 +41,6 @@ flowchart TD
 ## Local validation
 
 ```bash
-cd packages/rodlog
 gofmt -l .
 go test -race ./...
 go run ./cmd/rodlog --color=always --tool=typescript < testdata/typescript.log

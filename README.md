@@ -9,7 +9,6 @@ A small Go-powered streaming highlighter for **npm 📦, TypeScript 🟦, gcloud
 From the repository root, after building the binary:
 
 ```bash
-cd packages/rodlog
 go test ./...
 go build -o rodlog ./cmd/rodlog
 npm run build 2>&1 | ./rodlog --color=always
@@ -37,7 +36,7 @@ Docker cards also accept `Options.DockerColors` for badge background/text, DONE,
 ## 🧪 Tests
 
 ```bash
-cd packages/rodlog && go test -v ./...
+go test -v ./...
 ```
 
 Tests cover all five detectors, raw byte preservation, colorization, fallback on renderer errors, long lines and child exit codes.
@@ -77,15 +76,15 @@ See `scripts/install.sh` and `scripts/shell-hook.sh`. Install from a reviewed pi
 After publishing the first GitHub release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rodkisten/codespaces/main/packages/rodlog/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rodkisten/rodlog/main/scripts/install.sh | sh
 # Or:
-wget -qO- https://raw.githubusercontent.com/rodkisten/codespaces/main/packages/rodlog/scripts/install.sh | sh
+wget -qO- https://raw.githubusercontent.com/rodkisten/rodlog/main/scripts/install.sh | sh
 ```
 
 To install the **Bash and Zsh hook**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rodkisten/codespaces/main/packages/rodlog/scripts/install.sh | RODLOG_INSTALL_HOOK=both sh
+curl -fsSL https://raw.githubusercontent.com/rodkisten/rodlog/main/scripts/install.sh | RODLOG_INSTALL_HOOK=both sh
 ```
 
 Use `RODLOG_INSTALL_HOOK=bash` or `zsh` for one shell. Hooks add only a guarded source line to your existing rc file, without overwriting its contents. The helper exposes `rlog`, `rlog-raw` and `rlog-color`. Remove that line and `~/.config/rodlog/hook.sh` to uninstall the hook.
@@ -119,7 +118,6 @@ go run ./cmd/rodlog --color=always --tool=gcloud < testdata/gcloud.log
 The tests don't just assert behavior: `TestOutputExamples` **prints before/after examples** for npm, TypeScript, gcloud, Wrangler and Docker. In GitHub Actions, open the **🧪 Go tests** step to see the original fixture, highlighted ANSI output, example command and preservation assertion.
 
 ```bash
-cd packages/rodlog
 go test -v -run '^TestOutputExamples$' ./...
 go test -race -v ./...
 ```
@@ -134,13 +132,13 @@ The **🌈 rodlog · Test & Release** workflow runs only when `packages/rodlog/*
 Install the latest successful main build (requires GitHub CLI `gh`, authenticated repository access, and `unzip`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rodkisten/codespaces/main/packages/rodlog/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rodkisten/rodlog/main/scripts/install.sh | sh
 ```
 
 To enable Bash and Zsh helpers:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rodkisten/codespaces/main/packages/rodlog/scripts/install.sh | RODLOG_INSTALL_HOOK=both sh
+curl -fsSL https://raw.githubusercontent.com/rodkisten/rodlog/main/scripts/install.sh | RODLOG_INSTALL_HOOK=both sh
 ```
 
 The installer retrieves the newest successful push workflow run on `main`, downloads the named Actions artifact, verifies the selected platform binary's checksum, and installs to `~/.local/bin/rodlog`. It never builds locally. Because Actions artifacts are not permanent releases, publish a release for long-term retention when needed.

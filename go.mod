@@ -1,4 +1,4 @@
-module github.com/rodkisten/codespaces/packages/rodlog
+module github.com/rodkisten/rodlog
 
 go 1.23
 

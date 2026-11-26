@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/rodkisten/codespaces/packages/rodlog"
+	"github.com/rodkisten/rodlog"
 )
 
 type fileConfig struct {

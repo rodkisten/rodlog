@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/rodkisten/codespaces/packages/rodlog"
+	"github.com/rodkisten/rodlog"
 )
 
 // run is the CLI boundary. Injected streams make parsing testable without a

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-REPO="${RODLOG_REPO:-rodkisten/codespaces}"
-BASE="${RODLOG_RELEASE_BASE:-https://rodkisten.github.io/rodlog/releases}"
+REPO="${RODLOG_REPO:-rodkisten/rodlog}"
+BASE="${RODLOG_RELEASE_BASE:-https://github.com/$REPO/releases/latest/download}"
 DEST="${RODLOG_INSTALL_DIR:-$HOME/.local/bin}"
 HOOK="${RODLOG_INSTALL_HOOK:-none}"
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -60,7 +60,7 @@ echo "🌈 Installed $DEST/rodlog"
 if [ "$HOOK" != none ]; then
   HOOKFILE="$HOME/.config/rodlog/hook.sh"
   mkdir -p "$HOME/.config/rodlog"
-  download "https://raw.githubusercontent.com/$REPO/main/packages/rodlog/scripts/shell-hook.sh" "$TMP/hook.sh"
+  download "https://raw.githubusercontent.com/$REPO/main/scripts/shell-hook.sh" "$TMP/hook.sh"
   install -m 644 "$TMP/hook.sh" "$HOOKFILE"
   for shell in bash zsh; do
     case "$HOOK:$shell" in "$shell:$shell"|both:*) ;; *) continue ;; esac

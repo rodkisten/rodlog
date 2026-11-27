@@ -52,7 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           fixture="$GITHUB_WORKSPACE/testdata/typescript-intelligence"
-          npm install --prefix "$fixture" --no-package-lock --ignore-scripts --no-audit --no-fund typescript@latest
+          npm install --prefix "$fixture" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund typescript@latest @typescript/typescript6@latest
 
           set +e
           "$RUNNER_TEMP/rodlog" tsc             --project "$fixture/tsconfig.json"             --color=always             --links=never             --context-before=1             --context-after=1             > "$RUNNER_TEMP/typescript-intelligence.log" 2>&1

@@ -41,9 +41,9 @@ function normalizeTypeScript(mod) {
   return mod;
 }
 
-function packageRequire(base) {
+function packageRequire(base, specifier = 'typescript') {
   const req = createRequire(path.join(base, 'package.json'));
-  return normalizeTypeScript(req(req.resolve('typescript')));
+  return normalizeTypeScript(req(req.resolve(specifier)));
 }
 
 function typescriptFromExecutable() {
@@ -72,27 +72,45 @@ function typescriptFromExecutable() {
   }
 }
 
+function hasLegacyCompilerAPI(candidate) {
+  return Boolean(candidate?.sys && candidate?.readConfigFile && candidate?.createProgram);
+}
+
 function loadTypeScript(projectDir) {
   if (process.env.RODLOG_TYPESCRIPT) {
     try {
-      return normalizeTypeScript(baseRequire(path.resolve(process.env.RODLOG_TYPESCRIPT)));
+      const explicit = normalizeTypeScript(baseRequire(path.resolve(process.env.RODLOG_TYPESCRIPT)));
+      if (hasLegacyCompilerAPI(explicit)) return explicit;
     } catch {}
   }
 
+  // TypeScript 7 intentionally removed the legacy JavaScript Compiler API from
+  // the root "typescript" export. Microsoft ships @typescript/typescript6 as
+  // the compatibility API for tools that still need Program/Checker/sys.
   for (const base of new Set([projectDir, process.cwd()])) {
-    try {
-      return packageRequire(base);
-    } catch {}
+    for (const specifier of ['typescript', '@typescript/typescript6']) {
+      try {
+        const candidate = packageRequire(base, specifier);
+        if (hasLegacyCompilerAPI(candidate)) return candidate;
+      } catch {}
+    }
   }
 
   for (const [command, args] of [['npm', ['root', '-g']], ['pnpm', ['root', '-g']]]) {
     try {
       const root = execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-      if (root) return normalizeTypeScript(baseRequire(path.join(root, 'typescript')));
+      if (!root) continue;
+      for (const specifier of ['typescript', '@typescript/typescript6']) {
+        try {
+          const candidate = normalizeTypeScript(baseRequire(path.join(root, specifier)));
+          if (hasLegacyCompilerAPI(candidate)) return candidate;
+        } catch {}
+      }
     } catch {}
   }
 
-  return typescriptFromExecutable();
+  const executable = typescriptFromExecutable();
+  return hasLegacyCompilerAPI(executable) ? executable : null;
 }
 
 const config = resolveConfig(process.argv[2]);
@@ -111,7 +129,8 @@ if (!ts?.sys || !ts?.readConfigFile || !ts?.createProgram) {
     'RODLOGTS002',
     `TypeScript compiler could not be resolved for ${projectDir}`,
     [
-      'Install typescript in the project, expose a global tsc, or set RODLOG_TYPESCRIPT to the TypeScript package path.',
+      'For TypeScript 7, install @typescript/typescript6 alongside typescript so rodlog can use the compatibility Compiler API.',
+      'For TypeScript 6 or earlier, the project typescript package already exposes the Compiler API.',
       'rodlog never downloads TypeScript implicitly.',
     ],
   );

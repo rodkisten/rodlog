@@ -63,7 +63,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 	// Core streaming & output flags
 	mode := flags.String("mode", env("RODLOG_MODE", fallback(config.Mode, "enhance")), "raw|enhance|transform")
-	tool := flags.String("tool", env("RODLOG_TOOL", fallback(config.Tool, "auto")), "auto|npm|typescript|gcloud|wrangler|docker|vitest|node-test")
+	tool := flags.String("tool", env("RODLOG_TOOL", fallback(config.Tool, "auto")), "auto|npm|typescript|gcloud|wrangler|docker|vitest|node-test|rust|pnpm|go")
 	color := flags.String("color", env("RODLOG_COLOR", fallback(config.Color, "auto")), "auto|always|never")
 	output := flags.String("output", env("RODLOG_OUTPUT", fallback(config.Output, "terminal")), "terminal|jsonl|github")
 	themeName := flags.String("theme", env("RODLOG_THEME", fallback(config.Theme, "default")), "built-in theme: default|tokyo-night|dracula|catppuccin|github-dark|nord")
@@ -121,7 +121,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 	validTools := map[string]bool{
 		"auto": true, "npm": true, "typescript": true, "gcloud": true,
-		"wrangler": true, "docker": true, "vitest": true, "node-test": true,
+		"wrangler": true, "docker": true, "vitest": true, "node-test": true, "rust": true, "pnpm": true, "go": true,
 	}
 	if !validTools[*tool] {
 		fmt.Fprintln(stderr, "invalid tool:", *tool)

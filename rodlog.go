@@ -32,6 +32,9 @@ const (
 	Docker     Tool = "docker"
 	Vitest     Tool = "vitest"
 	NodeTest   Tool = "node-test"
+	Rust       Tool = "rust"
+	PNPM       Tool = "pnpm"
+	GoCompiler Tool = "go"
 	Generic    Tool = "generic"
 )
 
@@ -104,6 +107,9 @@ var toolPatterns = map[Tool][]string{
 }
 
 func Detect(s string) Tool {
+	if parseRustDiagnostic(s) != nil { return Rust }
+	if pnpmDiagnostic.MatchString(strings.TrimSpace(ansi.Strip(s))) { return PNPM }
+	if goDiagnostic.MatchString(strings.TrimSpace(ansi.Strip(s))) { return GoCompiler }
 	if m := buildKitHeader.FindStringSubmatch(s); m != nil {
 		if buildKitInstruction.MatchString(m[3]) || strings.HasPrefix(m[2], "internal") {
 			return Docker

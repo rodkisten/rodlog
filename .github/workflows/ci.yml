@@ -52,7 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           test -x "$RUNNER_TEMP/rodlog"
-          "$RUNNER_TEMP/rodlog" --color=always --tool=auto --output=terminal < testdata/pnpm.log
+          "$RUNNER_TEMP/rodlog" --color=always --mode=transform --tool=pnpm --output=terminal < testdata/pnpm.log
       - name: "Fixture preview: docker"
         if: ${{ !cancelled() }}
         shell: bash
@@ -66,4 +66,10 @@ jobs:
         run: |
           set -euo pipefail
           test -x "$RUNNER_TEMP/rodlog"
-          "$RUNNER_TEMP/rodlog" --color=always --tool=typescript --output=terminal < testdata/typescript.log
+          "$RUNNER_TEMP/rodlog" --color=always --mode=transform --tool=typescript --output=terminal < testdata/typescript.log
+      - name: "Fixture preview: Rust compiler JSON"
+        if: ${{ !cancelled() }}
+        run: '"$RUNNER_TEMP/rodlog" --mode=transform --color=always --tool=rust < testdata/rust.jsonl'
+      - name: "Fixture preview: Go compiler"
+        if: ${{ !cancelled() }}
+        run: '"$RUNNER_TEMP/rodlog" --mode=transform --color=always --tool=go < testdata/go.log'

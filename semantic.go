@@ -45,6 +45,22 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 	}
 	d := &Diagnostic{Tool: tool, Level: Error}
 	switch tool {
+	case Rust:
+		return parseRustDiagnostic(line)
+	case PNPM:
+		if m := pnpmDiagnostic.FindStringSubmatch(line); m != nil {
+			d.Code, d.Message = m[1], m[2]
+			if m[1] == "WARN" { d.Level = Warning }
+			return d
+		}
+	case GoCompiler:
+		if m := goDiagnostic.FindStringSubmatch(line); m != nil {
+			d.File, d.Message = m[1], m[4]
+			d.Line, _ = strconv.Atoi(m[2])
+			d.Column, _ = strconv.Atoi(m[3])
+			d.Spans = []DiagnosticSpan{{File:d.File, Line:d.Line, Column:d.Column, Primary:true}}
+			return d
+		}
 	case TypeScript:
 		for _, re := range []*regexp.Regexp{tsLocation, tsColon} {
 			if m := re.FindStringSubmatch(line); m != nil {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
@@ -477,7 +476,10 @@ func (sp *streamProcessor) trackDiagnosticGroup(diag *Diagnostic) (skip bool, er
 	}
 	sp.grouped[group][diag.Level]++
 
-	if group != sp.lastGroup {
+	if sp.lastGroup != "" {
+ if _, err := fmt.Fprintln(sp.dst, "\x1b[2;90m"+strings.Repeat("┄", 28)+"\x1b[0m"); err != nil { return false, err }
+ }
+ if group != sp.lastGroup {
 		if _, writeErr := fmt.Fprintf(sp.dst, "\n\x1b[1;36m▸ %s\x1b[0m\n", fileHyperlink(group, 0, 0, sp.opts)); writeErr != nil {
 			return false, writeErr
 		}
@@ -491,19 +493,7 @@ func (sp *streamProcessor) writeSummary() error {
 		return nil
 	}
 
-	groups := make([]string, 0, len(sp.grouped))
-	for name := range sp.grouped {
-		groups = append(groups, name)
-	}
-	slices.Sort(groups)
-
-	for _, name := range groups {
-		_, err := fmt.Fprintf(sp.dst, "  \x1b[2m%s\x1b[0m  \x1b[31m%s\x1b[0m · \x1b[33m%s\x1b[0m\n",
-			name, diagnosticCount(sp.grouped[name][Error], "error"), diagnosticCount(sp.grouped[name][Warning], "warning"))
-		if err != nil {
-			return err
-		}
-	}
+	if _, err := fmt.Fprintf(sp.dst, "\n\x1b[2;90m%s\x1b[0m\n  %d affected files/groups\n", strings.Repeat("┄",28), len(sp.grouped)); err != nil { return err }
 
 	_, err := fmt.Fprintf(sp.dst, "\n\x1b[1mDiagnostics: \x1b[31m%s\x1b[0m, \x1b[33m%s\x1b[0m\n",
 		diagnosticCount(sp.counts[Error], "error"), diagnosticCount(sp.counts[Warning], "warning"))

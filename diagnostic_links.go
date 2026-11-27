@@ -35,7 +35,17 @@ func fileHyperlink(file string, line, column int, opts Options) string {
 
 func renderLinkedDiagnostic(d *Diagnostic, opts Options) []byte {
  raw:=renderDiagnosticWithTheme(d,opts.SemanticColors,opts.DiagnosticIcons,opts.SyntaxTheme)
- if !opts.Links || d==nil || d.File=="" { return raw }
+ if !opts.Links || d==nil { return raw }
+ code:=d.Code
+ if d.Tool==TypeScript && len(code)>2 && strings.HasPrefix(code,"TS") && strings.Trim(code[2:],"0123456789")=="" {
+  label:="["+code+"]"
+  u:="https://www.typescriptlang.org/search?q="+url.QueryEscape(code)
+  switch code { case "TS2322","TS2345","TS2339","TS2741": u="https://www.typescriptlang.org/docs/handbook/2/objects.html"; case "TS18048","TS18047","TS2532": u="https://www.typescriptlang.org/docs/handbook/2/narrowing.html" }
+  // Unknown codes use a GitHub search in the official compiler repository.
+  if strings.Contains(u,"/search?") { u="https://github.com/microsoft/TypeScript/search?q="+url.QueryEscape(code)+"&type=issues" }
+  raw=[]byte(strings.Replace(string(raw),label,"\x1b]8;;"+u+"\x1b\\"+label+"\x1b]8;;\x1b\\",1))
+ }
+ if d.File=="" { return raw }
  label:=formatDiagnosticLocation(d)
  link:=fileHyperlink(d.File,d.Line,d.Column,opts)
  if label==link { return raw }

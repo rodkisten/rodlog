@@ -104,7 +104,7 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	out.Grow(defaultDiagBufferBytes + len(d.Message))
 
 	fmt.Fprintf(&out, "%s%s%s\n",
-		wrapANSI("1;"+levelColor, heading),
+		wrapANSI("1;7;"+levelColor, " "+heading+" "),
 		wrapANSI(semanticColor(colors.Location, "2"), strings.TrimRight("  "+location, " ")),
 		codeBadge,
 	)
@@ -172,6 +172,8 @@ func resolveDiagnosticHeader(level Level, colors SemanticColors, icons Diagnosti
 	switch level {
 	case Warning:
 		return iconOrDefault(icons.Warning, "⚠") + " WARNING", semanticColor(colors.Warning, "33")
+	case Success:
+		return "✓ SUCCESS", semanticColor(colors.Success, "32")
 	case Info:
 		return iconOrDefault(icons.Info, "ℹ") + " INFO", semanticColor(colors.Info, "36")
 	default:

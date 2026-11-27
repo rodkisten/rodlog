@@ -235,7 +235,14 @@ function signatureFromDeclaration(decl) {
   }
 }
 
-function signatureParameterFocus(call, sig, pos) {
+function focusRange(signature, focus, label) {
+  if (!signature || !focus) return null;
+  const start = signature.indexOf(focus);
+  if (start < 0) return { focus, label };
+  return { focus, start, end: start + focus.length, label };
+}
+
+function signatureParameterFocus(call, sig, pos, signature) {
   if (!call || !sig || !call.arguments?.length) return null;
   const index = call.arguments.findIndex(argument => pos >= argument.getFullStart() && pos < argument.getEnd());
   if (index < 0) return null;
@@ -251,7 +258,66 @@ function signatureParameterFocus(call, sig, pos) {
   const optional = Boolean(parameter.flags & ts.SymbolFlags.Optional);
   const rest = declaration && ts.isParameter(declaration) && declaration.dotDotDotToken ? '...' : '';
   const focus = rest + name + (optional ? '?' : '') + ': ' + checker.typeToString(type, declaration || call, ts.TypeFormatFlags.NoTruncation);
-  return { focus, label: `argument ${index + 1} expects this parameter` };
+  return focusRange(signature, focus, `argument ${index + 1} expects this parameter`);
+}
+
+function enclosingPropertyAssignment(node) {
+  for (let current = node; current; current = current.parent) {
+    if (ts.isPropertyAssignment(current) || ts.isShorthandPropertyAssignment(current)) return current;
+    if (ts.isSourceFile(current)) break;
+  }
+}
+
+function propertyExpectationFocus(node) {
+  const property = enclosingPropertyAssignment(node);
+  if (!property) return null;
+  const object = property.parent;
+  const contextual = checker.getContextualType(object);
+  if (!contextual) return null;
+
+  const name = property.name?.getText?.();
+  if (!name) return null;
+  const cleanName = name.replace(/^['"]|['"]$/g, '');
+  const symbol = contextual.getProperty(cleanName);
+  if (!symbol) return null;
+
+  const declaration = symbol.valueDeclaration || symbol.getDeclarations()?.[0] || property;
+  const type = checker.getTypeOfSymbolAtLocation(symbol, declaration);
+  const optional = Boolean(symbol.flags & ts.SymbolFlags.Optional);
+  const signature = cleanName + (optional ? '?' : '') + ': ' + checker.typeToString(type, declaration, ts.TypeFormatFlags.NoTruncation);
+  return { symbol, declaration, signature, focus: focusRange(signature, signature, `property '${cleanName}' expects this type`) };
+}
+
+function enclosingReturnStatement(node) {
+  for (let current = node; current; current = current.parent) {
+    if (ts.isReturnStatement(current)) return current;
+    if (ts.isSourceFile(current)) break;
+  }
+}
+
+function enclosingFunctionLike(node) {
+  for (let current = node; current; current = current.parent) {
+    if (isSignatureDeclaration(current)) return current;
+    if (ts.isSourceFile(current)) break;
+  }
+}
+
+function returnExpectationFocus(node) {
+  const ret = enclosingReturnStatement(node);
+  if (!ret) return null;
+  const fn = enclosingFunctionLike(ret.parent);
+  if (!fn) return null;
+  const sig = signatureFromDeclaration(fn);
+  if (!sig) return null;
+
+  const signature = checker.signatureToString(sig, fn, ts.TypeFormatFlags.NoTruncation);
+  const returnType = checker.typeToString(checker.getReturnTypeOfSignature(sig), fn, ts.TypeFormatFlags.NoTruncation);
+  const marker = ': ' + returnType;
+  const pos = signature.lastIndexOf(marker);
+  const focus = pos >= 0
+    ? { focus: returnType, start: pos + 2, end: pos + 2 + returnType.length, label: 'function returns this type' }
+    : focusRange(signature, returnType, 'function returns this type');
+  return { declaration: fn, signature, focus };
 }
 
 function addSymbol(result, symbol, node, label) {
@@ -303,7 +369,8 @@ for (const d of diagnostics) {
   if (d.file && d.start !== undefined) {
     const call = enclosingCall(d.file, d.start);
     const sig = call && checker.getResolvedSignature(call);
-    const focus = signatureParameterFocus(call, sig, d.start);
+    const resolvedSignature = sig ? checker.signatureToString(sig) : '';
+    const focus = signatureParameterFocus(call, sig, d.start, resolvedSignature);
     const decl = sig?.getDeclaration();
     if (decl && isProjectFile(decl.getSourceFile().fileName)) {
       const file = decl.getSourceFile();
@@ -316,8 +383,10 @@ for (const d of diagnostics) {
         line: p.line + 1,
         column: p.character + 1,
         message: 'Defined here (resolved or recovery signature)',
-        signature: checker.signatureToString(sig),
+        signature: resolvedSignature,
         signature_focus: focus?.focus || '',
+        signature_focus_start: focus?.start ?? 0,
+        signature_focus_end: focus?.end ?? 0,
         signature_focus_label: focus?.label || '',
         documentation: ts.displayPartsToString(sig.getDocumentationComment(checker)),
       });
@@ -325,6 +394,43 @@ for (const d of diagnostics) {
 
     const node = deepestNode(d.file, d.start);
     if (node) {
+      const propertyFocus = propertyExpectationFocus(node);
+      if (propertyFocus && isProjectFile(propertyFocus.declaration.getSourceFile().fileName)) {
+        const file = propertyFocus.declaration.getSourceFile();
+        const p = file.getLineAndCharacterOfPosition(propertyFocus.declaration.getStart());
+        (result.related ??= []).push({
+          tool: 'typescript', level: 'info',
+          file: path.relative(process.cwd(), file.fileName),
+          display_file: displayPath(file.fileName),
+          line: p.line + 1, column: p.character + 1,
+          message: 'Expected property declared here',
+          signature: propertyFocus.signature,
+          signature_focus: propertyFocus.focus?.focus || '',
+          signature_focus_start: propertyFocus.focus?.start ?? 0,
+          signature_focus_end: propertyFocus.focus?.end ?? 0,
+          signature_focus_label: propertyFocus.focus?.label || '',
+          documentation: ts.displayPartsToString(propertyFocus.symbol.getDocumentationComment(checker)),
+        });
+      }
+
+      const returnFocus = returnExpectationFocus(node);
+      if (returnFocus && isProjectFile(returnFocus.declaration.getSourceFile().fileName)) {
+        const file = returnFocus.declaration.getSourceFile();
+        const p = file.getLineAndCharacterOfPosition(returnFocus.declaration.getStart());
+        (result.related ??= []).push({
+          tool: 'typescript', level: 'info',
+          file: path.relative(process.cwd(), file.fileName),
+          display_file: displayPath(file.fileName),
+          line: p.line + 1, column: p.character + 1,
+          message: 'Return type declared here',
+          signature: returnFocus.signature,
+          signature_focus: returnFocus.focus?.focus || '',
+          signature_focus_start: returnFocus.focus?.start ?? 0,
+          signature_focus_end: returnFocus.focus?.end ?? 0,
+          signature_focus_label: returnFocus.focus?.label || '',
+        });
+      }
+
       addSymbol(result, checker.getSymbolAtLocation(node), node, 'Symbol declared here');
       const type = checker.getTypeAtLocation(node);
       addSymbol(result, type.aliasSymbol || type.getSymbol(), node, 'Type declared here');

@@ -75,3 +75,39 @@ func TestSignatureFocusHighlightsExpectedParameter(t *testing.T) {
 		if !strings.Contains(plain, want) { t.Fatalf("missing %q in %q", want, plain) }
 	}
 }
+
+
+func TestSignatureFocusUsesExactOffsets(t *testing.T) {
+	d := &Diagnostic{
+		Tool: TypeScript, Level: Error, Code: "TS2322", Message: "bad return",
+		Related: []*Diagnostic{{
+			File:"src/service.ts", Line:1, Column:1, Message:"Return type declared here",
+			Signature:"(value: string): string",
+			SignatureFocus:"string", SignatureFocusStart:17, SignatureFocusEnd:23,
+			SignatureFocusLabel:"function returns this type",
+		}},
+	}
+	plain := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	if !strings.Contains(plain, "◆ Return type") || !strings.Contains(plain, "↳ function returns this type") {
+		t.Fatalf("unexpected focused return output: %q", plain)
+	}
+}
+
+func TestExpectedPropertyFocusLabel(t *testing.T) {
+	d := &Diagnostic{
+		Tool: TypeScript, Level: Error, Code: "TS2322", Message:"bad property",
+		Related: []*Diagnostic{{
+			File:"src/types.ts", Line:5, Column:3, Message:"Expected property declared here",
+			Signature:"id: UserId", SignatureFocus:"id: UserId",
+			SignatureFocusLabel:"property 'id' expects this type",
+		}},
+	}
+	plain := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	if !strings.Contains(plain, "◆ Expected property") || !strings.Contains(plain, "property 'id' expects this type") {
+		t.Fatalf("unexpected property focus output: %q", plain)
+	}
+}

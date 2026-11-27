@@ -291,6 +291,10 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 			label := "Defined here"
 			lower := strings.ToLower(item.Message)
 			switch {
+			case strings.Contains(lower, "expected property"):
+				label = "Expected property"
+			case strings.Contains(lower, "return type"):
+				label = "Return type"
 			case strings.Contains(lower, "expected type"):
 				label = "Expected type"
 			case strings.Contains(lower, "type declared"):
@@ -333,11 +337,14 @@ func renderSignatureFocus(item *Diagnostic, colors SemanticColors, theme SyntaxT
 	}
 
 	plain := item.Signature
-	start := strings.Index(plain, item.SignatureFocus)
-	if start < 0 {
-		return signature
+	start, end := item.SignatureFocusStart, item.SignatureFocusEnd
+	if start < 0 || end <= start || end > len(plain) {
+		start = strings.Index(plain, item.SignatureFocus)
+		if start < 0 {
+			return signature
+		}
+		end = start + len(item.SignatureFocus)
 	}
-	end := start + len(item.SignatureFocus)
 	prefix := highlightSourceLine(plain[:start], "signature.ts", theme)
 	focus := highlightSourceLine(plain[start:end], "signature.ts", theme)
 	suffix := highlightSourceLine(plain[end:], "signature.ts", theme)
@@ -365,16 +372,20 @@ func relatedPriority(item *Diagnostic) int {
 	}
 	lower := strings.ToLower(item.Message)
 	switch {
-	case strings.Contains(lower, "expected type"):
+	case strings.Contains(lower, "expected property"):
 		return 0
-	case strings.Contains(lower, "type declared"):
+	case strings.Contains(lower, "return type"):
+		return 0
+	case strings.Contains(lower, "expected type"):
 		return 1
-	case strings.Contains(lower, "symbol declared"):
+	case strings.Contains(lower, "type declared"):
 		return 2
-	case strings.Contains(lower, "defined here"):
+	case strings.Contains(lower, "symbol declared"):
 		return 3
-	case strings.Contains(lower, "resolved or recovery"):
+	case strings.Contains(lower, "defined here"):
 		return 4
+	case strings.Contains(lower, "resolved or recovery"):
+		return 5
 	default:
 		return 5
 	}

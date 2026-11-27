@@ -26,6 +26,8 @@ type Diagnostic struct {
 	Related []*Diagnostic `json:"related,omitempty"`
  Signature string `json:"signature,omitempty"`
  SignatureFocus string `json:"signature_focus,omitempty"`
+ SignatureFocusStart int `json:"signature_focus_start,omitempty"`
+ SignatureFocusEnd int `json:"signature_focus_end,omitempty"`
  SignatureFocusLabel string `json:"signature_focus_label,omitempty"`
  Documentation string `json:"documentation,omitempty"`
 }

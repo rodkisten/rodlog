@@ -12,6 +12,6 @@ gh release download "$tag" -R "$repo" -p "$asset" -p SHA256SUMS -D "$tmp"
 (cd "$tmp"; grep "  $asset$" SHA256SUMS > checksum; if command -v sha256sum >/dev/null; then sha256sum -c checksum; else shasum -a 256 -c checksum; fi)
 dest="$HOME/.local/bin"
 mkdir -p "$dest"
-install -m 755 "$tmp/$asset" "$dest/.rodlog-new"
+/usr/bin/install -m 755 "$tmp/$asset" "$dest/.rodlog-new"
 mv -f "$dest/.rodlog-new" "$dest/rodlog"
 printf 'Installed %s at %s/rodlog\n' "$tag" "$dest"

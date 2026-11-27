@@ -8,6 +8,7 @@ import (
 )
 
 func stripColors(s string) string { return ansi.ReplaceAllString(s, "") }
+
 func TestHighlightTools(t *testing.T) {
 	cases := []struct {
 		tool         Tool
@@ -38,6 +39,7 @@ func TestHighlightTools(t *testing.T) {
 		})
 	}
 }
+
 func TestHighlightPreservesExistingANSI(t *testing.T) {
 	input := "\x1b[32mERROR\x1b[0m\n"
 	got := string(Render(Event{Text: input, Level: Error, Tool: NPM}, Options{Color: true, Mode: Enhance}))
@@ -45,6 +47,7 @@ func TestHighlightPreservesExistingANSI(t *testing.T) {
 		t.Fatalf("ANSI changed: %q", got)
 	}
 }
+
 func TestHighlightCRLF(t *testing.T) {
 	input := "error TS2322\r\n"
 	got := string(Render(Event{Text: input, Level: Error, Tool: TypeScript}, Options{Color: true, Mode: Enhance}))

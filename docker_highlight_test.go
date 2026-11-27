@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-// Docker status coloring must not destroy timestamps or compose prefixes.
 func TestDockerSemanticHighlight(t *testing.T) {
 	input := "api-1 | 2026-11-16T12:00:00Z health: unhealthy\n"
 	got := string(Render(Event{Tool: Docker, Level: Info, Text: input}, Options{Mode: Enhance, Color: true}))
@@ -29,7 +28,6 @@ func TestDockerfileSyntaxDetection(t *testing.T) {
 	}
 }
 
-// BuildKit statuses should be legible while step numbers and timing survive.
 func TestDockerBuildSteps(t *testing.T) {
 	cases := []struct {
 		line    string

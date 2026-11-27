@@ -33,5 +33,4 @@ func TestJSONTable(t *testing.T) {
 	if !ok || !strings.Contains(output, "api") || !strings.Contains(output, "web") {
 		t.Fatalf("invalid table: %q", output)
 	}
-	t.Logf("📊 Colored JSON summary:\n%s", output)
 }

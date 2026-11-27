@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// TestDiagnosticExplanation protects the semantic meaning of a type mismatch:
-// the right-hand type is what TypeScript expects, not what it received.
 func TestDiagnosticExplanation(t *testing.T) {
 	cases := []struct {
 		code, message, want string

@@ -23,13 +23,11 @@ func ToolInventory() []ToolSpec {
 	}
 }
 
-// DetectCommand selects a parser by executable identity, not log contents.
 func DetectCommand(argv []string) Tool {
 	if len(argv) == 0 {
 		return Generic
 	}
 	name := strings.ToLower(filepath.Base(argv[0]))
-	// Node has many subcommands; only select the test adapter for --test.
 	if (name == "node" || name == "node.exe") && len(argv) > 1 {
 		for _, arg := range argv[1:] {
 			if arg == "--test" || strings.HasPrefix(arg, "--test=") {

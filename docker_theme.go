@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-// DockerColors defines SGR sequences (without ESC[ and m) used by Docker cards.
-// Empty values inherit defaults, preserving the existing appearance.
 type DockerColors struct {
 	BadgeBackground string `toml:"badge_background"`
 	BadgeText       string `toml:"badge_text"`
@@ -50,12 +48,11 @@ func mergeDockerColors(base, override DockerColors) DockerColors {
 	return base
 }
 
-var hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-var sgrPattern = regexp.MustCompile(`^[0-9]+(?:;[0-9]+)*$`)
+var (
+	hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+	sgrPattern      = regexp.MustCompile(`^[0-9]+(?:;[0-9]+)*$`)
+)
 
-// ColorSGR converts a #RRGGBB color to terminal true-color SGR parameters.
-// Existing SGR parameters are accepted for backwards compatibility.
-// Invalid inputs return an error rather than emitting untrusted escape codes.
 func ColorSGR(value string, background bool) (string, error) {
 	if hexColorPattern.MatchString(value) {
 		red, _ := strconv.ParseUint(value[1:3], 16, 8)
@@ -73,8 +70,6 @@ func ColorSGR(value string, background bool) (string, error) {
 	return value, nil
 }
 
-// ParseDockerColors validates and normalizes all configured Docker colors.
-// Empty fields inherit their defaults; malformed values are rejected.
 func ParseDockerColors(input DockerColors) (DockerColors, error) {
 	base := mergeDockerColors(DefaultDockerColors(), input)
 	fields := []struct {

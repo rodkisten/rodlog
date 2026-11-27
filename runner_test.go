@@ -2,7 +2,6 @@ package rodlog
 
 import "testing"
 
-// TestRunnerDetection ensures node itself is not misclassified as a test runner.
 func TestRunnerDetection(t *testing.T) {
 	cases := []struct {
 		args []string

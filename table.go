@@ -3,24 +3,37 @@ package rodlog
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 )
 
-// JSONTable renders a compact summary of a JSON object or array of objects.
-// The original JSON remains available in raw/enhance mode.
+const (
+	maxTableColumns = 6
+	maxTableRows    = 30
+	maxCellWidth    = 60
+)
+
+var (
+	tableBorderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	tableHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Padding(0, 1)
+	tableCellStyle   = lipgloss.NewStyle().Padding(0, 1)
+)
+
 func JSONTable(input string, color bool) (string, bool) {
 	var payload any
 	if err := json.Unmarshal([]byte(input), &payload); err != nil {
 		return "", false
 	}
+
 	var records []map[string]any
 	switch value := payload.(type) {
 	case map[string]any:
 		records = []map[string]any{value}
 	case []any:
+		records = make([]map[string]any, 0, len(value))
 		for _, item := range value {
 			record, ok := item.(map[string]any)
 			if !ok {
@@ -31,60 +44,99 @@ func JSONTable(input string, color bool) (string, bool) {
 	default:
 		return "", false
 	}
+
 	if len(records) == 0 {
 		return "", false
 	}
+
+	keys := selectTableColumns(records)
+	if len(keys) == 0 {
+		return "", false
+	}
+
+	limit := min(len(records), maxTableRows)
+	rows := make([][]string, 0, limit)
+	for i := 0; i < limit; i++ {
+		row := make([]string, len(keys))
+		for colIdx, key := range keys {
+			row[colIdx] = formatTableCell(records[i][key])
+		}
+		rows = append(rows, row)
+	}
+
+	tbl := table.New().
+		Border(lipgloss.RoundedBorder()).
+		Headers(keys...).
+		Rows(rows...)
+
+	if color {
+		tbl = tbl.
+			BorderStyle(tableBorderStyle).
+			StyleFunc(func(row, col int) lipgloss.Style {
+				if row == table.HeaderRow {
+					return tableHeaderStyle
+				}
+				return tableCellStyle
+			})
+	} else {
+		tbl = tbl.StyleFunc(func(row, col int) lipgloss.Style {
+			return lipgloss.NewStyle().Padding(0, 1)
+		})
+	}
+
+	var output strings.Builder
+	output.WriteString(tbl.Render())
+	output.WriteByte('\n')
+
+	if len(records) > maxTableRows {
+		fmt.Fprintf(&output, "… %d additional records\n", len(records)-maxTableRows)
+	}
+
+	return output.String(), true
+}
+
+func selectTableColumns(records []map[string]any) []string {
 	priority := []string{"name", "status", "state", "id", "region", "url", "version", "created", "updated", "message"}
-	seen := map[string]bool{}
-	var keys []string
+	seen := make(map[string]struct{})
+	keys := make([]string, 0, maxTableColumns)
+
 	for _, key := range priority {
 		for _, record := range records {
-			if _, ok := record[key]; ok && !seen[key] {
-				keys = append(keys, key)
-				seen[key] = true
+			if _, ok := record[key]; ok {
+				if _, already := seen[key]; !already {
+					keys = append(keys, key)
+					seen[key] = struct{}{}
+				}
 			}
 		}
 	}
+
 	var extra []string
 	for _, record := range records {
 		for key := range record {
-			if !seen[key] {
+			if _, already := seen[key]; !already {
 				extra = append(extra, key)
-				seen[key] = true
+				seen[key] = struct{}{}
 			}
 		}
 	}
-	sort.Strings(extra)
+	slices.Sort(extra)
 	keys = append(keys, extra...)
-	if len(keys) > 6 {
-		keys = keys[:6]
+
+	if len(keys) > maxTableColumns {
+		keys = keys[:maxTableColumns]
 	}
-	header := strings.Join(keys, "  │  ")
-	if color {
-		header = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Render(header)
+	return keys
+}
+
+func formatTableCell(raw any) string {
+	if raw == nil {
+		return "—"
 	}
-	var output strings.Builder
-	output.WriteString(header)
-	output.WriteByte('\n')
-	for i, record := range records {
-		if i >= 30 {
-			fmt.Fprintf(&output, "… %d additional records\n", len(records)-i)
-			break
-		}
-		values := make([]string, 0, len(keys))
-		for _, key := range keys {
-			value := fmt.Sprint(record[key])
-			if record[key] == nil {
-				value = "—"
-			}
-			value = strings.ReplaceAll(strings.ReplaceAll(value, "\n", " "), "\r", " ")
-			if len(value) > 60 {
-				value = value[:57] + "..."
-			}
-			values = append(values, value)
-		}
-		output.WriteString(strings.Join(values, "  │  "))
-		output.WriteByte('\n')
+	value := fmt.Sprint(raw)
+	value = strings.ReplaceAll(strings.ReplaceAll(value, "\n", " "), "\r", " ")
+	if len(value) > maxCellWidth {
+		return value[:maxCellWidth-3] + "..."
 	}
-	return output.String(), true
+	return value
 }

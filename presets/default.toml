@@ -35,4 +35,3 @@ ARG = "keyword"
 [docker.tokens]
 error_code = '\b(?:ERESOLVE|ENOENT|EACCES|EPERM)\b'
 path = '(?:/[[:alnum:]_.-]+)+'
-

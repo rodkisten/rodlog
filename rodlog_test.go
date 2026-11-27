@@ -16,6 +16,7 @@ func TestDetect(t *testing.T) {
 		}
 	}
 }
+
 func TestRawExact(t *testing.T) {
 	data := []byte("one\rprogress\n\x1b[31mred\x1b[0m\n\x00end")
 	var dst bytes.Buffer
@@ -24,6 +25,7 @@ func TestRawExact(t *testing.T) {
 		t.Fatalf("raw mismatch: %v", err)
 	}
 }
+
 func TestEnhanceNoColor(t *testing.T) {
 	data := "npm ERR! broken\nwarning deprecated\n"
 	var dst bytes.Buffer
@@ -32,11 +34,11 @@ func TestEnhanceNoColor(t *testing.T) {
 		t.Fatalf("output: %q, %v", dst.String(), err)
 	}
 }
+
 func TestColors(t *testing.T) {
 	var dst bytes.Buffer
 	e := New(Options{Color: true})
 	_ = e.Process(context.Background(), strings.NewReader("npm ERR! broken\n"), &dst)
-	// Severity stays red even when the theme changes its intensity.
 	if !strings.Contains(dst.String(), "\x1b[31m") && !strings.Contains(dst.String(), "\x1b[1;31m") {
 		t.Fatal(dst.String())
 	}
@@ -45,6 +47,7 @@ func TestColors(t *testing.T) {
 type failingRenderer struct{}
 
 func (failingRenderer) Render(Event) ([]byte, error) { return nil, errors.New("boom") }
+
 func TestRendererFallback(t *testing.T) {
 	var dst bytes.Buffer
 	e := New(Options{Color: true})
@@ -54,6 +57,7 @@ func TestRendererFallback(t *testing.T) {
 		t.Fatal(dst.String())
 	}
 }
+
 func TestLongLine(t *testing.T) {
 	input := strings.Repeat("a", 100000) + "\n"
 	var dst bytes.Buffer

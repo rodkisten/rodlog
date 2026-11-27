@@ -17,7 +17,6 @@ func TestChromaJSONOutput(t *testing.T) {
 	if !strings.Contains(output, "\x1b[") {
 		t.Fatalf("expected Chroma ANSI colors, got %q", output)
 	}
-	t.Logf("🎨 Chroma JSON:\n%s", output)
 }
 
 func TestLipGlossSeverity(t *testing.T) {
@@ -25,7 +24,6 @@ func TestLipGlossSeverity(t *testing.T) {
 	if !strings.Contains(output, "ERROR") {
 		t.Fatalf("Lip Gloss lost severity text: %q", output)
 	}
-	t.Logf("🎨 Lip Gloss severity: %s", output)
 }
 
 func TestSyntaxLanguage(t *testing.T) {

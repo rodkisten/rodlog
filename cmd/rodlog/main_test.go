@@ -55,3 +55,14 @@ func TestDockerSeparatorFlagOverridesEnvironment(t *testing.T) {
 		t.Fatalf("status=%d output=%q error=%q", status, out.String(), errs.String())
 	}
 }
+
+func TestThemesAndInitConfigSubcommands(t *testing.T) {
+	var out, errs bytes.Buffer
+	if code := run([]string{"themes"}, strings.NewReader(""), &out, &errs); code != 0 || !strings.Contains(out.String(), "tokyo-night") {
+		t.Fatalf("themes subcommand failed: code=%d out=%q err=%q", code, out.String(), errs.String())
+	}
+	out.Reset()
+	if code := run([]string{"init-config"}, strings.NewReader(""), &out, &errs); code != 0 || !strings.Contains(out.String(), "[highlight]") {
+		t.Fatalf("init-config subcommand failed: code=%d out=%q err=%q", code, out.String(), errs.String())
+	}
+}

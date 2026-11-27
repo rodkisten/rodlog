@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-// Diagnostic is the renderer-independent representation of a tool message.
-// Original output remains in Event.Text; parsers must never rewrite source bytes.
 type Diagnostic struct {
 	Tool    Tool   `json:"tool"`
 	Level   Level  `json:"level"`
@@ -33,10 +31,6 @@ var (
 	wranglerError   = regexp.MustCompile(`(?i)^(?:✘\s*)?(?:error|warning):\s*(.+)$`)
 )
 
-// ParseDiagnostic extracts stable fields from tool-specific error formats.
-// The adapter never executes or modifies the original command output: Event.Text
-// remains authoritative, while this optional record powers cards and annotations.
-// Unknown lines return nil so ordinary logs keep their original presentation.
 func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 	line := strings.TrimSpace(ansi.ReplaceAllString(input, ""))
 	if line == "" {
@@ -103,8 +97,6 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 			return d
 		}
 	case Vitest, NodeTest:
-		// Assertion messages are handled before runner-specific status markers.
-		// Capture both values without consuming multiline stack traces.
 		if m := runnerAssertion.FindStringSubmatch(line); m != nil {
 			d.Message = line
 			return d

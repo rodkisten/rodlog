@@ -11,16 +11,19 @@ import (
 )
 
 type fileConfig struct {
-	Mode   string `toml:"mode"`
-	Tool   string `toml:"tool"`
-	Color  string `toml:"color"`
-	Output string `toml:"output"`
-	Semantic rodlog.SemanticColors `toml:"semantic"`
-	Icons rodlog.DiagnosticIcons `toml:"icons"`
-	Syntax rodlog.SyntaxTheme `toml:"syntax"`
-	Docker struct {
-		Separator string `toml:"separator"`
-		Colors rodlog.DockerColors `toml:"colors"`
+	Mode      string                 `toml:"mode"`
+	Tool      string                 `toml:"tool"`
+	Color     string                 `toml:"color"`
+	Output    string                 `toml:"output"`
+	Theme     string                 `toml:"theme"`
+	CardWidth int                    `toml:"card_width"`
+	Semantic  rodlog.SemanticColors  `toml:"semantic"`
+	Highlight rodlog.HighlightColors `toml:"highlight"`
+	Icons     rodlog.DiagnosticIcons `toml:"icons"`
+	Syntax    rodlog.SyntaxTheme     `toml:"syntax"`
+	Docker    struct {
+		Separator string              `toml:"separator"`
+		Colors    rodlog.DockerColors `toml:"colors"`
 	} `toml:"docker"`
 }
 

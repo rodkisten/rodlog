@@ -9,8 +9,6 @@ import (
 	"testing"
 )
 
-// TestOutputExamples prints real, colored rodlog output into go test -v and
-// GitHub Actions logs. Each tool has a fixture and an exact-text assertion.
 func TestOutputExamples(t *testing.T) {
 	tests := []struct {
 		name string
@@ -56,8 +54,6 @@ func TestOutputExamples(t *testing.T) {
 			if !strings.Contains(output.String(), "\x1b[") {
 				t.Fatalf("expected ANSI highlighting for %s", tt.tool)
 			}
-
 		})
 	}
 }
-

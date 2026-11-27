@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-// JSONLRenderer emits one machine-readable event per input frame.
-// The original text is included to allow lossless downstream inspection.
 type JSONLRenderer struct{}
 
 func (JSONLRenderer) Render(event Event) ([]byte, error) {
@@ -18,8 +16,6 @@ func (JSONLRenderer) Render(event Event) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// AnnotationRenderer writes GitHub Actions workflow commands for diagnostics.
-// Unrecognized output is deliberately ignored.
 type AnnotationRenderer struct{}
 
 func (AnnotationRenderer) Render(event Event) ([]byte, error) {
@@ -55,6 +51,7 @@ func escapeAnnotationData(s string) string {
 	r := strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A")
 	return r.Replace(s)
 }
+
 func escapeAnnotationProperty(s string) string {
 	return strings.NewReplacer(":", "%3A", ",", "%2C").Replace(escapeAnnotationData(s))
 }

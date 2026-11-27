@@ -517,7 +517,7 @@ func Render(ev Event, opts Options) []byte {
 	hasExistingANSI := ansiPattern.MatchString(text)
 
 	if ev.Diagnostic != nil && opts.Mode == Transform && !hasExistingANSI {
-		return renderDiagnosticWithTheme(ev.Diagnostic, opts.SemanticColors, opts.DiagnosticIcons)
+		return renderDiagnosticWithTheme(ev.Diagnostic, opts.SemanticColors, opts.DiagnosticIcons, opts.SyntaxTheme)
 	}
 	if hasExistingANSI {
 		return []byte(text)

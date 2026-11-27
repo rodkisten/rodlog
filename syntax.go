@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/mattn/go-runewidth"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -106,4 +108,30 @@ func syntaxLanguage(text string) string {
 		return "yaml"
 	}
 	return ""
+}
+
+ // highlightSourceLine expands tabs before coloring so source and carets share cell offsets.
+func highlightSourceLine(source, file string, theme SyntaxTheme) string {
+	source = strings.TrimSuffix(source, "\r")
+	var expanded strings.Builder
+	width := 0
+	for _, r := range source {
+		if r == '\t' {
+			n := 8 - width%8
+			expanded.WriteString(strings.Repeat(" ", n))
+			width += n
+		} else {
+			expanded.WriteRune(r)
+			width += runewidth.RuneWidth(r)
+		}
+	}
+	source = expanded.String()
+	lang := theme.Lexer
+	if lang == "" {
+		if lexer := lexers.Match(file); lexer != nil { lang = lexer.Config().Name }
+	}
+	if lang == "" { return source }
+	colored, err := SyntaxHighlightWithTheme(source, lang, theme)
+	if err != nil { return source }
+	return strings.TrimRight(colored, "\r\n")
 }

@@ -84,11 +84,13 @@ func renderDiagnostic(d *Diagnostic) []byte {
 	return renderDiagnosticWithTheme(d, SemanticColors{}, DiagnosticIcons{})
 }
 
-func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons DiagnosticIcons) []byte {
+func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons DiagnosticIcons, themes ...SyntaxTheme) []byte {
 	if d == nil {
 		return nil
 	}
 
+	theme := SyntaxTheme{}
+	if len(themes) > 0 { theme = themes[0] }
 	heading, levelColor := resolveDiagnosticHeader(d.Level, colors, icons)
 	location := formatDiagnosticLocation(d)
 
@@ -116,9 +118,9 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	}
 
 	if len(d.Spans) > 0 && hasEmbeddedSource(d.Spans) {
-		out.WriteString(renderDiagnosticSpans(d.Spans, levelColor, colors))
+		out.WriteString(renderDiagnosticSpans(d.Spans, levelColor, colors, theme))
 	} else if d.File != "" && d.Line > 0 && d.Line <= maxDiagnosticLineNumber {
-		if frame := diagnosticFrame(d); frame != "" {
+		if frame := diagnosticFrame(d, theme); frame != "" {
 			out.WriteString(frame)
 		}
 	}

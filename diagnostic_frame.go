@@ -20,7 +20,7 @@ var (
 
 // diagnosticFrame reads only local relative source paths, never absolute paths
 // or parent traversal. It is terminal-only and never changes structured events.
-func diagnosticFrame(d *Diagnostic) string {
+func diagnosticFrame(d *Diagnostic, themes ...SyntaxTheme) string {
 	if filepath.IsAbs(d.File) || filepath.Clean(d.File) != d.File || d.File == ".." || strings.HasPrefix(d.File, ".."+string(filepath.Separator)) {
 		return ""
 	}
@@ -37,6 +37,8 @@ func diagnosticFrame(d *Diagnostic) string {
 		return ""
 	}
 
+	theme := SyntaxTheme{}
+	if len(themes) > 0 { theme = themes[0] }
 	first := max(1, d.Line-2)
 	last := min(len(lines), d.Line+2)
 
@@ -45,10 +47,9 @@ func diagnosticFrame(d *Diagnostic) string {
 		isTarget := i == d.Line
 
 		marker := " "
-		lineText := lines[i-1]
+		lineText := highlightSourceLine(lines[i-1], d.File, theme)
 		if isTarget {
 			marker = styleActiveMarker.Render(">")
-			lineText = styleActiveLine.Render(lineText)
 		}
 
 		gutter := styleGutter.Render(fmt.Sprintf("%4d |", i))
@@ -56,7 +57,7 @@ func diagnosticFrame(d *Diagnostic) string {
 
 		if isTarget && d.Column > 0 && d.Column < 512 {
 			padding := strings.Repeat(" ", visualColumn(lines[i-1], d.Column))
-			emptyGutter := styleGutter.Render("       |")
+			emptyGutter := styleGutter.Render("         |")
 			pointer := stylePointer.Render("^")
 			fmt.Fprintf(&b, "%s %s%s\n", emptyGutter, padding, pointer)
 		}

@@ -10,11 +10,22 @@ import (
 )
 
 type DiagnosticIcons struct {
-	Error       string `toml:"error"`
-	Warning     string `toml:"warning"`
-	Info        string `toml:"info"`
-	Suggestion  string `toml:"suggestion"`
-	Explanation string `toml:"explanation"`
+	Error         string `toml:"error"`
+	Warning       string `toml:"warning"`
+	Info          string `toml:"info"`
+	Success       string `toml:"success"`
+	Suggestion    string `toml:"suggestion"`
+	Explanation   string `toml:"explanation"`
+	Related       string `toml:"related"`
+	Definition    string `toml:"definition"`
+	Signature     string `toml:"signature"`
+	Documentation string `toml:"documentation"`
+	Candidate     string `toml:"candidate"`
+	Location      string `toml:"location"`
+	Group         string `toml:"group"`
+	Summary       string `toml:"summary"`
+	Note          string `toml:"note"`
+	Help          string `toml:"help"`
 }
 
 type SyntaxTheme struct {
@@ -192,10 +203,51 @@ func iconOrDefault(icon, fallback string) string {
 	return icon
 }
 
+func resolveDiagnosticIcons(input DiagnosticIcons, unicode bool) DiagnosticIcons {
+	defaults := DiagnosticIcons{
+		Error: "x", Warning: "!", Info: "i", Success: "+",
+		Suggestion: "->", Explanation: "->", Related: "->", Definition: "*",
+		Signature: "fn", Documentation: "i", Candidate: "o", Location: "@",
+		Group: ">", Summary: "#", Note: "-", Help: "+",
+	}
+	if unicode {
+		defaults = DiagnosticIcons{
+			Error: "✖", Warning: "⚠", Info: "ℹ", Success: "✓",
+			Suggestion: "✦", Explanation: "↳", Related: "↪", Definition: "◆",
+			Signature: "ƒ", Documentation: "ⓘ", Candidate: "◇", Location: "⌖",
+			Group: "▸", Summary: "Σ", Note: "•", Help: "→",
+		}
+	}
+	pick := func(value, fallback string) string {
+		if value != "" { return value }
+		return fallback
+	}
+	input.Error = pick(input.Error, defaults.Error)
+	input.Warning = pick(input.Warning, defaults.Warning)
+	input.Info = pick(input.Info, defaults.Info)
+	input.Success = pick(input.Success, defaults.Success)
+	input.Suggestion = pick(input.Suggestion, defaults.Suggestion)
+	input.Explanation = pick(input.Explanation, defaults.Explanation)
+	input.Related = pick(input.Related, defaults.Related)
+	input.Definition = pick(input.Definition, defaults.Definition)
+	input.Signature = pick(input.Signature, defaults.Signature)
+	input.Documentation = pick(input.Documentation, defaults.Documentation)
+	input.Candidate = pick(input.Candidate, defaults.Candidate)
+	input.Location = pick(input.Location, defaults.Location)
+	input.Group = pick(input.Group, defaults.Group)
+	input.Summary = pick(input.Summary, defaults.Summary)
+	input.Note = pick(input.Note, defaults.Note)
+	input.Help = pick(input.Help, defaults.Help)
+	return input
+}
+
 func ParseDiagnosticIcons(input DiagnosticIcons) (DiagnosticIcons, error) {
 	for name, icon := range map[string]string{
-		"error": input.Error, "warning": input.Warning, "info": input.Info,
-		"suggestion": input.Suggestion, "explanation": input.Explanation,
+		"error": input.Error, "warning": input.Warning, "info": input.Info, "success": input.Success,
+		"suggestion": input.Suggestion, "explanation": input.Explanation, "related": input.Related,
+		"definition": input.Definition, "signature": input.Signature, "documentation": input.Documentation,
+		"candidate": input.Candidate, "location": input.Location, "group": input.Group,
+		"summary": input.Summary, "note": input.Note, "help": input.Help,
 	} {
 		if !utf8.ValidString(icon) || utf8.RuneCountInString(icon) > 12 {
 			return DiagnosticIcons{}, fmt.Errorf("icons.%s: expected at most 12 valid Unicode characters", name)

@@ -64,6 +64,7 @@ type Options struct {
 	SemanticColors  SemanticColors
 	DiagnosticIcons DiagnosticIcons
 	SyntaxTheme     SyntaxTheme
+	ASCIISymbols    bool
  Links bool
  LinkEditor string
 	Preset          *SemanticPreset
@@ -471,6 +472,8 @@ func (sp *streamProcessor) trackDiagnosticGroup(diag *Diagnostic) (skip bool, er
 	if group == "" {
 		group = string(diag.Tool)
 	}
+	displayGroup := diag.DisplayFile
+	if displayGroup == "" { displayGroup = group }
 	if sp.grouped[group] == nil {
 		sp.grouped[group] = make(map[Level]int)
 	}
@@ -493,10 +496,15 @@ func (sp *streamProcessor) writeSummary() error {
 		return nil
 	}
 
-	if _, err := fmt.Fprintf(sp.dst, "\n\x1b[2;90m%s\x1b[0m\n  %d affected files/groups\n", strings.Repeat("┄",28), len(sp.grouped)); err != nil { return err }
-
-	_, err := fmt.Fprintf(sp.dst, "\n\x1b[1mDiagnostics: \x1b[31m%s\x1b[0m, \x1b[33m%s\x1b[0m\n",
-		diagnosticCount(sp.counts[Error], "error"), diagnosticCount(sp.counts[Warning], "warning"))
+	icons:=resolveDiagnosticIcons(sp.opts.DiagnosticIcons,!sp.opts.ASCIISymbols)
+	divider:="┄"
+	if sp.opts.ASCIISymbols { divider="-" }
+	total:=sp.counts[Error]+sp.counts[Warning]
+	if _, err := fmt.Fprintf(sp.dst, "\n\x1b[2;90m%s\x1b[0m\n", strings.Repeat(divider,28)); err != nil { return err }
+	if _, err := fmt.Fprintf(sp.dst, "  \x1b[1m%s Diagnostics\x1b[0m  %s · %s\n",
+		icons.Summary, diagnosticCount(total,"diagnostic"), diagnosticCount(len(sp.grouped),"affected group")); err != nil { return err }
+	_, err := fmt.Fprintf(sp.dst, "  \x1b[31m%s %s\x1b[0m   \x1b[33m%s %s\x1b[0m\n",
+		icons.Error, diagnosticCount(sp.counts[Error], "error"), icons.Warning, diagnosticCount(sp.counts[Warning], "warning"))
 	return err
 }
 

@@ -162,7 +162,8 @@ function diagnostic(d) {
   if (d.file && d.start !== undefined) {
     const p = d.file.getLineAndCharacterOfPosition(d.start);
     const end = d.file.getLineAndCharacterOfPosition(d.start + (d.length || 1));
-    result.file = displayPath(d.file.fileName);
+    result.file = path.relative(process.cwd(), d.file.fileName);
+    result.display_file = displayPath(d.file.fileName);
     result.line = p.line + 1;
     result.column = p.character + 1;
     result.spans = [{
@@ -214,7 +215,8 @@ function addSymbol(result, symbol, node, label) {
     const file = decl.getSourceFile();
     const p = file.getLineAndCharacterOfPosition(decl.getStart());
     const location = {
-      file: displayPath(file.fileName),
+      file: path.relative(process.cwd(), file.fileName),
+      display_file: displayPath(file.fileName),
       line: p.line + 1,
       column: p.character + 1,
     };
@@ -226,13 +228,16 @@ function addSymbol(result, symbol, node, label) {
     ) continue;
 
     const name = checker.symbolToString(symbol);
-    const signature = ts.isTypeAliasDeclaration(decl)
-      ? 'type ' + name + ' = ' + decl.type.getText(file)
-      : ts.isInterfaceDeclaration(decl)
-        ? 'interface ' + name + (decl.typeParameters?.length
-          ? '<' + decl.typeParameters.map(param => param.getText(file)).join(', ') + '>'
-          : '')
-        : name + ': ' + checker.typeToString(checker.getTypeOfSymbolAtLocation(symbol, decl), node, flags);
+    const declaredSignature = checker.getSignatureFromDeclaration(decl);
+    const signature = declaredSignature
+      ? name + checker.signatureToString(declaredSignature, decl, flags)
+      : ts.isTypeAliasDeclaration(decl)
+        ? 'type ' + name + ' = ' + decl.type.getText(file)
+        : ts.isInterfaceDeclaration(decl)
+          ? 'interface ' + name + (decl.typeParameters?.length
+            ? '<' + decl.typeParameters.map(param => param.getText(file)).join(', ') + '>'
+            : '')
+          : name + ': ' + checker.typeToString(checker.getTypeOfSymbolAtLocation(symbol, decl), node, flags);
 
     (result.related ??= []).push({
       tool: 'typescript',
@@ -258,7 +263,8 @@ for (const d of diagnostics) {
       (result.related ??= []).push({
         tool: 'typescript',
         level: 'info',
-        file: displayPath(file.fileName),
+        file: path.relative(process.cwd(), file.fileName),
+        display_file: displayPath(file.fileName),
         line: p.line + 1,
         column: p.character + 1,
         message: 'Defined here (resolved or recovery signature)',

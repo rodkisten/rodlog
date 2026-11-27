@@ -16,6 +16,7 @@ type fileConfig struct {
 	Color     string                 `toml:"color"`
 	Output    string                 `toml:"output"`
 	Theme     string                 `toml:"theme"`
+	Symbols   string                 `toml:"symbols"`
 	CardWidth int                    `toml:"card_width"`
 	Semantic  rodlog.SemanticColors  `toml:"semantic"`
 	Highlight rodlog.HighlightColors `toml:"highlight"`

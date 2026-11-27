@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/alecthomas/chroma/v2/styles"
@@ -115,8 +116,19 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	iconError := flags.String("icon-error", env("RODLOG_ICON_ERROR", config.Icons.Error), "error diagnostic icon")
 	iconWarning := flags.String("icon-warning", env("RODLOG_ICON_WARNING", config.Icons.Warning), "warning diagnostic icon")
 	iconInfo := flags.String("icon-info", env("RODLOG_ICON_INFO", config.Icons.Info), "info diagnostic icon")
+	iconSuccess := flags.String("icon-success", env("RODLOG_ICON_SUCCESS", config.Icons.Success), "success diagnostic icon")
 	iconSuggestion := flags.String("icon-suggestion", env("RODLOG_ICON_SUGGESTION", config.Icons.Suggestion), "suggestion icon")
 	iconExplanation := flags.String("icon-explanation", env("RODLOG_ICON_EXPLANATION", config.Icons.Explanation), "explanation icon")
+	iconRelated := flags.String("icon-related", env("RODLOG_ICON_RELATED", config.Icons.Related), "related diagnostic icon")
+	iconDefinition := flags.String("icon-definition", env("RODLOG_ICON_DEFINITION", config.Icons.Definition), "definition icon")
+	iconSignature := flags.String("icon-signature", env("RODLOG_ICON_SIGNATURE", config.Icons.Signature), "signature icon")
+	iconDocumentation := flags.String("icon-documentation", env("RODLOG_ICON_DOCUMENTATION", config.Icons.Documentation), "documentation icon")
+	iconCandidate := flags.String("icon-candidate", env("RODLOG_ICON_CANDIDATE", config.Icons.Candidate), "overload candidate icon")
+	iconLocation := flags.String("icon-location", env("RODLOG_ICON_LOCATION", config.Icons.Location), "location icon")
+	iconGroup := flags.String("icon-group", env("RODLOG_ICON_GROUP", config.Icons.Group), "diagnostic group icon")
+	iconSummary := flags.String("icon-summary", env("RODLOG_ICON_SUMMARY", config.Icons.Summary), "summary icon")
+	iconNote := flags.String("icon-note", env("RODLOG_ICON_NOTE", config.Icons.Note), "note icon")
+	iconHelp := flags.String("icon-help", env("RODLOG_ICON_HELP", config.Icons.Help), "help icon")
 	presetPath := flags.String("preset", env("RODLOG_PRESET", "default"), "semantic preset: default|off|path to TOML file")
 	jsonOutput := flags.Bool("json", false, "request JSON for allowlisted commands and show a summary table in transform mode")
 
@@ -147,6 +159,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	if (*links!="auto" && *links!="always" && *links!="never") || (*linkEditor!="file" && *linkEditor!="vscode" && *linkEditor!="cursor") { fmt.Fprintln(stderr,"invalid link settings"); return 2 }
+ if *symbols!="auto" && *symbols!="unicode" && *symbols!="ascii" { fmt.Fprintln(stderr,"invalid symbols mode:",*symbols); return 2 }
+ asciiSymbols:=*symbols=="ascii" || (*symbols=="auto" && !supportsUnicode())
  themeBundle, themeErr := rodlog.ResolveTheme(*themeName)
 	if themeErr != nil {
 		fmt.Fprintln(stderr, themeErr)
@@ -192,8 +206,11 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	icons, iconErr := rodlog.ParseDiagnosticIcons(rodlog.DiagnosticIcons{
-		Error: *iconError, Warning: *iconWarning, Info: *iconInfo,
-		Suggestion: *iconSuggestion, Explanation: *iconExplanation,
+		Error: *iconError, Warning: *iconWarning, Info: *iconInfo, Success: *iconSuccess,
+		Suggestion: *iconSuggestion, Explanation: *iconExplanation, Related: *iconRelated,
+		Definition: *iconDefinition, Signature: *iconSignature, Documentation: *iconDocumentation,
+		Candidate: *iconCandidate, Location: *iconLocation, Group: *iconGroup, Summary: *iconSummary,
+		Note: *iconNote, Help: *iconHelp,
 	})
 	if iconErr != nil {
 		fmt.Fprintln(stderr, iconErr)
@@ -245,6 +262,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		SemanticColors:  semanticColors,
 		DiagnosticIcons: icons,
 		SyntaxTheme:     syntaxTheme,
+		ASCIISymbols:    asciiSymbols,
  Links: *output=="terminal" && (*links=="always" || (*links=="auto" && isTerminal(stdout) && os.Getenv("TERM")!="dumb")),
  LinkEditor: *linkEditor,
 		Preset:          preset,
@@ -338,6 +356,12 @@ func envInt(key string, defaultVal int) int {
 }
 
 // isTerminal conservatively detects a character device for auto-color.
+func supportsUnicode() bool {
+	if os.Getenv("TERM") == "dumb" { return false }
+	locale := strings.ToLower(os.Getenv("LC_ALL") + " " + os.Getenv("LC_CTYPE") + " " + os.Getenv("LANG"))
+	return locale == "" || strings.Contains(locale, "utf-8") || strings.Contains(locale, "utf8")
+}
+
 func isTerminal(w io.Writer) bool {
 	f, ok := w.(*os.File)
 	if !ok {
@@ -353,7 +377,27 @@ tool = "auto"          # auto | npm | typescript | gcloud | wrangler | docker | 
 color = "auto"         # auto | always | never
 output = "terminal"    # terminal | jsonl | github
 theme = "tokyo-night"  # default | tokyo-night | dracula | catppuccin | github-dark | nord
+symbols = "auto"        # auto | unicode | ascii
 card_width = 72        # 24..160 columns
+
+[icons]
+# Leave empty to use rodlog's Unicode/ASCII defaults selected by symbols.
+error = ""
+warning = ""
+info = ""
+success = ""
+suggestion = ""
+explanation = ""
+related = ""
+definition = ""
+signature = ""
+documentation = ""
+candidate = ""
+location = ""
+group = ""
+summary = ""
+note = ""
+help = ""
 
 [syntax]
 style = "tokyonight-night"

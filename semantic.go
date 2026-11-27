@@ -12,8 +12,9 @@ type Diagnostic struct {
 	Tool    Tool   `json:"tool"`
 	Level   Level  `json:"level"`
 	Code    string `json:"code,omitempty"`
-	File    string `json:"file,omitempty"`
-	Line    int    `json:"line,omitempty"`
+	File        string `json:"file,omitempty"`
+	DisplayFile string `json:"display_file,omitempty"`
+	Line        int    `json:"line,omitempty"`
 	Column  int    `json:"column,omitempty"`
 	Message string `json:"message"`
 	SourceLines []string `json:"source_lines,omitempty"`

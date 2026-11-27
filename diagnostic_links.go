@@ -15,7 +15,11 @@ func diagnosticCount(n int, noun string) string {
 }
 
 func fileHyperlink(file string, line, column int, opts Options) string {
- label:=file
+ return fileHyperlinkLabel(file, file, line, column, opts)
+}
+
+func fileHyperlinkLabel(file, label string, line, column int, opts Options) string {
+ if label=="" { label=file }
  if line>0 { label+=fmt.Sprintf(":%d",line); if column>0 { label+=fmt.Sprintf(":%d",column) } }
  if !opts.Links || file=="" || strings.IndexFunc(file,unicode.IsControl)>=0 { return label }
  abs,err:=filepath.Abs(file)
@@ -34,7 +38,8 @@ func fileHyperlink(file string, line, column int, opts Options) string {
 }
 
 func renderLinkedDiagnostic(d *Diagnostic, opts Options) []byte {
- raw:=renderDiagnosticWithTheme(d,opts.SemanticColors,opts.DiagnosticIcons,opts.SyntaxTheme)
+ icons:=resolveDiagnosticIcons(opts.DiagnosticIcons,!opts.ASCIISymbols)
+ raw:=renderDiagnosticWithTheme(d,opts.SemanticColors,icons,opts.SyntaxTheme)
  if !opts.Links || d==nil { return raw }
  code:=d.Code
  if d.Tool==TypeScript && len(code)>2 && strings.HasPrefix(code,"TS") && strings.Trim(code[2:],"0123456789")=="" {
@@ -46,8 +51,22 @@ func renderLinkedDiagnostic(d *Diagnostic, opts Options) []byte {
   raw=[]byte(strings.Replace(string(raw),label,"\x1b]8;;"+u+"\x1b\\"+label+"\x1b]8;;\x1b\\",1))
  }
  if d.File=="" { return raw }
+ rendered:=string(raw)
  label:=formatDiagnosticLocation(d)
- link:=fileHyperlink(d.File,d.Line,d.Column,opts)
- if label==link { return raw }
- return []byte(strings.Replace(string(raw),label,link,1))
+ displayFile:=d.DisplayFile
+ if displayFile=="" { displayFile=d.File }
+ linkLabel:=displayFile
+ if d.Line>0 { linkLabel+=fmt.Sprintf(":%d",d.Line); if d.Column>0 { linkLabel+=fmt.Sprintf(":%d",d.Column) } }
+ link:=fileHyperlinkLabel(d.File,linkLabel,d.Line,d.Column,opts)
+ if label!=link { rendered=strings.Replace(rendered,label,link,1) }
+ for _,related:=range d.Related {
+  if related==nil || related.File=="" { continue }
+  relatedLabel:=formatDiagnosticLocation(related)
+  display:=related.DisplayFile
+  if display=="" { display=related.File }
+  if related.Line>0 { display+=fmt.Sprintf(":%d",related.Line); if related.Column>0 { display+=fmt.Sprintf(":%d",related.Column) } }
+  relatedLink:=fileHyperlinkLabel(related.File,display,related.Line,related.Column,opts)
+  if relatedLabel!=relatedLink { rendered=strings.Replace(rendered,relatedLabel,relatedLink,1) }
+ }
+ return []byte(rendered)
 }

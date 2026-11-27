@@ -91,6 +91,7 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 
 	theme := SyntaxTheme{}
 	if len(themes) > 0 { theme = themes[0] }
+	icons = resolveDiagnosticIcons(icons, true)
 	heading, levelColor := resolveDiagnosticHeader(d.Level, colors, icons)
 	location := formatDiagnosticLocation(d)
 	if hasEmbeddedSource(d.Spans) || len(d.SourceLines)>0 { location = "" }
@@ -159,19 +160,118 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	}
 
 	for _, note := range d.Notes {
-		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(infoColor, "note:"), note)
+		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(infoColor, icons.Note), note)
 	}
 	for _, help := range d.Help {
-		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), "help:"), help)
+		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), icons.Help), help)
 	}
-	for _, related := range d.Related {
-		if related != nil {
-			fmt.Fprintf(&out, "  %s %s: %s\n", wrapANSI(infoColor, "related:"), formatDiagnosticLocation(related), related.Message)
- if related.Signature != "" { fmt.Fprintf(&out, "    %s\n", highlightSourceLine(related.Signature, "signature.ts", theme)) }
- if related.Documentation != "" { fmt.Fprintf(&out, "    %s\n", wrapANSI("2", related.Documentation)) }
+	renderRelatedDiagnostics(&out, d, colors, icons, theme)
+	return []byte(out.String())
+}
+
+func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme) {
+	if parent == nil || len(parent.Related) == 0 {
+		return
+	}
+
+	seen := make(map[string]bool)
+	related := make([]*Diagnostic, 0, len(parent.Related))
+	for _, item := range parent.Related {
+		if item == nil {
+			continue
+		}
+		key := fmt.Sprintf("%s:%d:%d:%s:%s:%s", item.File, item.Line, item.Column, item.Message, item.Signature, item.Documentation)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		related = append(related, item)
+	}
+
+	overload := parent.Tool == TypeScript && (parent.Code == "TS2769" || strings.Contains(strings.ToLower(parent.Message), "no overload matches"))
+	consumed := make(map[*Diagnostic]bool)
+	if overload {
+		candidates := make([]*Diagnostic, 0, len(related))
+		signatures := make(map[string]bool)
+		for _, item := range related {
+			if item.Signature == "" || !strings.Contains(strings.ToLower(item.Message), "symbol declared here") {
+				continue
+			}
+			if signatures[item.Signature] {
+				consumed[item] = true
+				continue
+			}
+			signatures[item.Signature] = true
+			candidates = append(candidates, item)
+			consumed[item] = true
+		}
+		if len(candidates) > 1 {
+			fmt.Fprintf(out, "  %s %s\n",
+				wrapANSI(semanticColor(colors.Warning, "33"), icons.Candidate),
+				wrapANSI("1", diagnosticCount(len(candidates), "candidate signature")),
+			)
+			doc := ""
+			for i, item := range candidates {
+				fmt.Fprintf(out, "    %d  %s %s\n", i+1,
+					wrapANSI(semanticColor(colors.Info, "36"), icons.Signature),
+					highlightSourceLine(item.Signature, "signature.ts", theme),
+				)
+				if loc := formatDiagnosticLocation(item); loc != "" {
+					fmt.Fprintf(out, "       %s %s\n",
+						wrapANSI(semanticColor(colors.Location, "36"), icons.Location),
+						wrapANSI("2", loc),
+					)
+				}
+				if doc == "" && item.Documentation != "" {
+					doc = item.Documentation
+				}
+			}
+			if doc != "" {
+				fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Documentation), wrapANSI("2", doc))
+			}
+			for _, item := range related {
+				if strings.Contains(strings.ToLower(item.Message), "resolved or recovery signature") {
+					consumed[item] = true
+				}
+			}
 		}
 	}
-	return []byte(out.String())
+
+	for _, item := range related {
+		if consumed[item] {
+			continue
+		}
+		location := formatDiagnosticLocation(item)
+		if item.Signature != "" {
+			label := "Defined here"
+			lower := strings.ToLower(item.Message)
+			switch {
+			case strings.Contains(lower, "expected type"):
+				label = "Expected type"
+			case strings.Contains(lower, "type declared"):
+				label = "Type declared here"
+			}
+			fmt.Fprintf(out, "  %s %s", wrapANSI(semanticColor(colors.Info, "36"), icons.Definition), label)
+			if location != "" {
+				fmt.Fprintf(out, "  %s %s", wrapANSI(semanticColor(colors.Location, "36"), icons.Location), wrapANSI("2", location))
+			}
+			out.WriteByte('\n')
+			fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Signature), highlightSourceLine(item.Signature, "signature.ts", theme))
+			if item.Documentation != "" {
+				fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Documentation), wrapANSI("2", item.Documentation))
+			}
+			continue
+		}
+
+		fmt.Fprintf(out, "  %s", wrapANSI(semanticColor(colors.Info, "36"), icons.Related))
+		if location != "" {
+			fmt.Fprintf(out, " %s %s", wrapANSI(semanticColor(colors.Location, "36"), icons.Location), wrapANSI("2", location))
+		}
+		if item.Message != "" {
+			fmt.Fprintf(out, "  %s", item.Message)
+		}
+		out.WriteByte('\n')
+	}
 }
 
 func resolveDiagnosticHeader(level Level, colors SemanticColors, icons DiagnosticIcons) (heading, color string) {
@@ -179,7 +279,7 @@ func resolveDiagnosticHeader(level Level, colors SemanticColors, icons Diagnosti
 	case Warning:
 		return iconOrDefault(icons.Warning, "⚠") + " WARNING", semanticColor(colors.Warning, "33")
 	case Success:
-		return "✓ SUCCESS", semanticColor(colors.Success, "32")
+		return iconOrDefault(icons.Success, "✓") + " SUCCESS", semanticColor(colors.Success, "32")
 	case Info:
 		return iconOrDefault(icons.Info, "ℹ") + " INFO", semanticColor(colors.Info, "36")
 	default:

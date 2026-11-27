@@ -221,8 +221,9 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 			for i, item := range candidates {
 				fmt.Fprintf(out, "    %d  %s %s\n", i+1,
 					wrapANSI(semanticColor(colors.Info, "36"), icons.Signature),
-					highlightSourceLine(item.Signature, "signature.ts", theme),
+					renderSignatureFocus(item, colors, theme),
 				)
+				renderSignatureFocusHint(out, item, colors, icons)
 				if loc := formatDiagnosticLocation(item); loc != "" {
 					fmt.Fprintf(out, "       %s %s\n",
 						wrapANSI(semanticColor(colors.Location, "36"), icons.Location),
@@ -300,7 +301,8 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 				fmt.Fprintf(out, "  %s %s", wrapANSI(semanticColor(colors.Location, "36"), icons.Location), wrapANSI("2", location))
 			}
 			out.WriteByte('\n')
-			fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Signature), highlightSourceLine(item.Signature, "signature.ts", theme))
+			fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Signature), renderSignatureFocus(item, colors, theme))
+			renderSignatureFocusHint(out, item, colors, icons)
 			if item.Documentation != "" && detail != DetailCompact {
 				fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Documentation), wrapANSI("2", item.Documentation))
 			}
@@ -319,6 +321,42 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 	if hidden > 0 {
 		fmt.Fprintf(out, "  %s %s\n", wrapANSI("2", "…"), wrapANSI("2", diagnosticCount(hidden, "more related detail")+" · --detail=verbose"))
 	}
+}
+
+func renderSignatureFocus(item *Diagnostic, colors SemanticColors, theme SyntaxTheme) string {
+	if item == nil || item.Signature == "" {
+		return ""
+	}
+	signature := highlightSourceLine(item.Signature, "signature.ts", theme)
+	if item.SignatureFocus == "" {
+		return signature
+	}
+
+	plain := item.Signature
+	start := strings.Index(plain, item.SignatureFocus)
+	if start < 0 {
+		return signature
+	}
+	end := start + len(item.SignatureFocus)
+	prefix := highlightSourceLine(plain[:start], "signature.ts", theme)
+	focus := highlightSourceLine(plain[start:end], "signature.ts", theme)
+	suffix := highlightSourceLine(plain[end:], "signature.ts", theme)
+	focus = wrapANSI("1;4;"+semanticColor(colors.Error, "31"), ansiPattern.ReplaceAllString(focus, ""))
+	return prefix + focus + suffix
+}
+
+func renderSignatureFocusHint(out *strings.Builder, item *Diagnostic, colors SemanticColors, icons DiagnosticIcons) {
+	if item == nil || item.SignatureFocus == "" {
+		return
+	}
+	label := item.SignatureFocusLabel
+	if label == "" {
+		label = "expected here"
+	}
+	fmt.Fprintf(out, "      %s %s\n",
+		wrapANSI(semanticColor(colors.Error, "31"), icons.Explanation),
+		wrapANSI("2", label),
+	)
 }
 
 func relatedPriority(item *Diagnostic) int {

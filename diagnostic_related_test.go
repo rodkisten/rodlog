@@ -55,3 +55,23 @@ func TestRelatedDetailModes(t *testing.T) {
 		t.Fatalf("unexpected verbose output: %q", verbose)
 	}
 }
+
+
+func TestSignatureFocusHighlightsExpectedParameter(t *testing.T) {
+	d := &Diagnostic{
+		Tool: TypeScript, Level: Error, Code: "TS2345", File: "src/call.ts", Line: 4, Column: 9,
+		Message: "Argument of type 'number' is not assignable to parameter of type 'UserId'.",
+		Related: []*Diagnostic{{
+			File:"src/service.ts", Line:10, Column:1, Message:"Defined here (resolved or recovery signature)",
+			Signature:"(repository: UserRepository, id: UserId): Promise<User>",
+			SignatureFocus:"id: UserId",
+			SignatureFocusLabel:"argument 2 expects this parameter",
+		}},
+	}
+	plain := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	for _, want := range []string{"id: UserId", "↳ argument 2 expects this parameter"} {
+		if !strings.Contains(plain, want) { t.Fatalf("missing %q in %q", want, plain) }
+	}
+}

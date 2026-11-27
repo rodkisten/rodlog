@@ -25,6 +25,8 @@ type Diagnostic struct {
 	Help []string `json:"help,omitempty"`
 	Related []*Diagnostic `json:"related,omitempty"`
  Signature string `json:"signature,omitempty"`
+ SignatureFocus string `json:"signature_focus,omitempty"`
+ SignatureFocusLabel string `json:"signature_focus_label,omitempty"`
  Documentation string `json:"documentation,omitempty"`
 }
 

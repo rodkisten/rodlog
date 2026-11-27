@@ -72,6 +72,7 @@ jobs:
           grep -q 'errors-assignments.ts' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'errors-generics.ts' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'errors-control-flow.ts' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'expects this parameter' "$RUNNER_TEMP/typescript-intelligence.log"
 
           printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
       - name: Shell hook checks

@@ -207,6 +207,53 @@ function deepestNode(node, pos) {
   return ts.forEachChild(node, child => deepestNode(child, pos)) || node;
 }
 
+function isSignatureDeclaration(node) {
+  return Boolean(
+    node && (
+      ts.isFunctionDeclaration(node)
+      || ts.isMethodDeclaration(node)
+      || ts.isConstructorDeclaration(node)
+      || ts.isGetAccessorDeclaration(node)
+      || ts.isSetAccessorDeclaration(node)
+      || ts.isFunctionExpression(node)
+      || ts.isArrowFunction(node)
+      || ts.isCallSignatureDeclaration(node)
+      || ts.isConstructSignatureDeclaration(node)
+      || ts.isMethodSignature(node)
+      || ts.isFunctionTypeNode(node)
+      || ts.isConstructorTypeNode(node)
+    )
+  );
+}
+
+function signatureFromDeclaration(decl) {
+  if (!isSignatureDeclaration(decl)) return undefined;
+  try {
+    return checker.getSignatureFromDeclaration(decl);
+  } catch {
+    return undefined;
+  }
+}
+
+function signatureParameterFocus(call, sig, pos) {
+  if (!call || !sig || !call.arguments?.length) return null;
+  const index = call.arguments.findIndex(argument => pos >= argument.getFullStart() && pos < argument.getEnd());
+  if (index < 0) return null;
+
+  const parameters = sig.getParameters();
+  if (!parameters.length) return null;
+  const parameter = parameters[Math.min(index, parameters.length - 1)];
+  if (!parameter) return null;
+
+  const declaration = parameter.valueDeclaration || parameter.getDeclarations()?.[0] || sig.getDeclaration();
+  const type = checker.getTypeOfSymbolAtLocation(parameter, declaration || call);
+  const name = checker.symbolToString(parameter);
+  const optional = Boolean(parameter.flags & ts.SymbolFlags.Optional);
+  const rest = declaration && ts.isParameter(declaration) && declaration.dotDotDotToken ? '...' : '';
+  const focus = rest + name + (optional ? '?' : '') + ': ' + checker.typeToString(type, declaration || call, ts.TypeFormatFlags.NoTruncation);
+  return { focus, label: `argument ${index + 1} expects this parameter` };
+}
+
 function addSymbol(result, symbol, node, label) {
   if (!symbol) return;
   if (symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
@@ -228,7 +275,7 @@ function addSymbol(result, symbol, node, label) {
     ) continue;
 
     const name = checker.symbolToString(symbol);
-    const declaredSignature = checker.getSignatureFromDeclaration(decl);
+    const declaredSignature = signatureFromDeclaration(decl);
     const signature = declaredSignature
       ? name + checker.signatureToString(declaredSignature, decl, flags)
       : ts.isTypeAliasDeclaration(decl)
@@ -256,6 +303,7 @@ for (const d of diagnostics) {
   if (d.file && d.start !== undefined) {
     const call = enclosingCall(d.file, d.start);
     const sig = call && checker.getResolvedSignature(call);
+    const focus = signatureParameterFocus(call, sig, d.start);
     const decl = sig?.getDeclaration();
     if (decl && isProjectFile(decl.getSourceFile().fileName)) {
       const file = decl.getSourceFile();
@@ -269,6 +317,8 @@ for (const d of diagnostics) {
         column: p.character + 1,
         message: 'Defined here (resolved or recovery signature)',
         signature: checker.signatureToString(sig),
+        signature_focus: focus?.focus || '',
+        signature_focus_label: focus?.label || '',
         documentation: ts.displayPartsToString(sig.getDocumentationComment(checker)),
       });
     }

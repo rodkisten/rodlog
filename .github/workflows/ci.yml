@@ -39,3 +39,31 @@ jobs:
             }'
       - name: Shell hook checks
         run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'
+      - name: "Fixture preview: npm"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$RUNNER_TEMP/rodlog"
+          "$RUNNER_TEMP/rodlog" --color=always --tool=npm --output=terminal < testdata/npm.log
+      - name: "Fixture preview: pnpm"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$RUNNER_TEMP/rodlog"
+          "$RUNNER_TEMP/rodlog" --color=always --tool=auto --output=terminal < testdata/pnpm.log
+      - name: "Fixture preview: docker"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$RUNNER_TEMP/rodlog"
+          "$RUNNER_TEMP/rodlog" --color=always --tool=docker --output=terminal < testdata/docker.log
+      - name: "Fixture preview: typescript"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$RUNNER_TEMP/rodlog"
+          "$RUNNER_TEMP/rodlog" --color=always --tool=typescript --output=terminal < testdata/typescript.log

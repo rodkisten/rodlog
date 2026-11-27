@@ -70,6 +70,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
  contextBefore := flags.Int("context-before", envInt("RODLOG_CONTEXT_BEFORE",2), "source lines before diagnostic (0-20)")
  contextAfter := flags.Int("context-after", envInt("RODLOG_CONTEXT_AFTER",2), "source lines after diagnostic (0-20)")
  symbols := flags.String("symbols", env("RODLOG_SYMBOLS", fallback(config.Symbols, "auto")), "auto|unicode|ascii")
+ detail := flags.String("detail", env("RODLOG_DETAIL", fallback(config.Detail, "normal")), "compact|normal|verbose")
 
 	// Core streaming & output flags
 	mode := flags.String("mode", env("RODLOG_MODE", fallback(config.Mode, "enhance")), "raw|enhance|transform")
@@ -161,6 +162,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 	if (*links!="auto" && *links!="always" && *links!="never") || (*linkEditor!="file" && *linkEditor!="vscode" && *linkEditor!="cursor") { fmt.Fprintln(stderr,"invalid link settings"); return 2 }
  if *symbols!="auto" && *symbols!="unicode" && *symbols!="ascii" { fmt.Fprintln(stderr,"invalid symbols mode:",*symbols); return 2 }
+ if *detail!="compact" && *detail!="normal" && *detail!="verbose" { fmt.Fprintln(stderr,"invalid detail mode:",*detail); return 2 }
  asciiSymbols:=*symbols=="ascii" || (*symbols=="auto" && !supportsUnicode())
  themeBundle, themeErr := rodlog.ResolveTheme(*themeName)
 	if themeErr != nil {
@@ -264,6 +266,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		DiagnosticIcons: icons,
 		SyntaxTheme:     syntaxTheme,
 		ASCIISymbols:    asciiSymbols,
+		Detail:          rodlog.DiagnosticDetail(*detail),
  Links: *output=="terminal" && (*links=="always" || (*links=="auto" && isTerminal(stdout) && os.Getenv("TERM")!="dumb")),
  LinkEditor: *linkEditor,
 		Preset:          preset,
@@ -379,6 +382,7 @@ color = "auto"         # auto | always | never
 output = "terminal"    # terminal | jsonl | github
 theme = "tokyo-night"  # default | tokyo-night | dracula | catppuccin | github-dark | nord
 symbols = "auto"        # auto | unicode | ascii
+detail = "normal"        # compact | normal | verbose
 card_width = 72        # 24..160 columns
 
 [icons]

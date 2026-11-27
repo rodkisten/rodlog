@@ -85,12 +85,18 @@ func renderDiagnostic(d *Diagnostic) []byte {
 }
 
 func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons DiagnosticIcons, themes ...SyntaxTheme) []byte {
+	theme := SyntaxTheme{}
+	if len(themes) > 0 { theme = themes[0] }
+	return renderDiagnosticWithDetail(d, colors, icons, theme, DetailNormal)
+}
+
+func renderDiagnosticWithDetail(d *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme, detail DiagnosticDetail) []byte {
 	if d == nil {
 		return nil
 	}
-
-	theme := SyntaxTheme{}
-	if len(themes) > 0 { theme = themes[0] }
+	if detail == "" {
+		detail = DetailNormal
+	}
 	icons = resolveDiagnosticIcons(icons, true)
 	heading, levelColor := resolveDiagnosticHeader(d.Level, colors, icons)
 	location := formatDiagnosticLocation(d)
@@ -169,7 +175,7 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	return []byte(out.String())
 }
 
-func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme) {
+func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme, detail DiagnosticDetail) {
 	if parent == nil || len(parent.Related) == 0 {
 		return
 	}
@@ -190,6 +196,7 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 
 	overload := parent.Tool == TypeScript && (parent.Code == "TS2769" || strings.Contains(strings.ToLower(parent.Message), "no overload matches"))
 	consumed := make(map[*Diagnostic]bool)
+	hidden := 0
 	if overload {
 		candidates := make([]*Diagnostic, 0, len(related))
 		signatures := make(map[string]bool)
@@ -237,10 +244,47 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 		}
 	}
 
+	remaining := make([]*Diagnostic, 0, len(related))
 	for _, item := range related {
-		if consumed[item] {
-			continue
+		if !consumed[item] {
+			remaining = append(remaining, item)
 		}
+	}
+
+	if detail != DetailVerbose && len(remaining) > 0 {
+		bestSignature := -1
+		bestCompilerRelated := -1
+		bestPriority := 99
+		for i, item := range remaining {
+			if item.Signature != "" {
+				priority := relatedPriority(item)
+				if priority < bestPriority {
+					bestPriority = priority
+					bestSignature = i
+				}
+			} else if bestCompilerRelated < 0 {
+				bestCompilerRelated = i
+			}
+		}
+		keep := make(map[int]bool)
+		if bestSignature >= 0 {
+			keep[bestSignature] = true
+		}
+		if detail == DetailNormal && bestCompilerRelated >= 0 && bestCompilerRelated != bestSignature {
+			keep[bestCompilerRelated] = true
+		}
+		filtered := make([]*Diagnostic, 0, len(keep))
+		for i, item := range remaining {
+			if keep[i] {
+				filtered = append(filtered, item)
+			} else {
+				hidden++
+			}
+		}
+		remaining = filtered
+	}
+
+	for _, item := range remaining {
 		location := formatDiagnosticLocation(item)
 		if item.Signature != "" {
 			label := "Defined here"
@@ -257,7 +301,7 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 			}
 			out.WriteByte('\n')
 			fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Signature), highlightSourceLine(item.Signature, "signature.ts", theme))
-			if item.Documentation != "" {
+			if item.Documentation != "" && detail != DetailCompact {
 				fmt.Fprintf(out, "    %s %s\n", wrapANSI(semanticColor(colors.Info, "36"), icons.Documentation), wrapANSI("2", item.Documentation))
 			}
 			continue
@@ -271,6 +315,30 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 			fmt.Fprintf(out, "  %s", item.Message)
 		}
 		out.WriteByte('\n')
+	}
+	if hidden > 0 {
+		fmt.Fprintf(out, "  %s %s\n", wrapANSI("2", "…"), wrapANSI("2", diagnosticCount(hidden, "more related detail")+" · --detail=verbose"))
+	}
+}
+
+func relatedPriority(item *Diagnostic) int {
+	if item == nil {
+		return 99
+	}
+	lower := strings.ToLower(item.Message)
+	switch {
+	case strings.Contains(lower, "expected type"):
+		return 0
+	case strings.Contains(lower, "type declared"):
+		return 1
+	case strings.Contains(lower, "symbol declared"):
+		return 2
+	case strings.Contains(lower, "defined here"):
+		return 3
+	case strings.Contains(lower, "resolved or recovery"):
+		return 4
+	default:
+		return 5
 	}
 }
 
@@ -288,12 +356,16 @@ func resolveDiagnosticHeader(level Level, colors SemanticColors, icons Diagnosti
 }
 
 func formatDiagnosticLocation(d *Diagnostic) string {
-	if d.File == "" {
+	if d.File == "" && d.DisplayFile == "" {
 		return string(d.Tool)
 	}
 
 	var b strings.Builder
-	b.WriteString(d.File)
+	file := d.DisplayFile
+	if file == "" {
+		file = d.File
+	}
+	b.WriteString(file)
 	if d.Line > 0 {
 		b.WriteByte(':')
 		b.WriteString(strconv.Itoa(d.Line))

@@ -39,6 +39,14 @@ const (
 
 type Level string
 
+type DiagnosticDetail string
+
+const (
+	DetailCompact DiagnosticDetail = "compact"
+	DetailNormal  DiagnosticDetail = "normal"
+	DetailVerbose DiagnosticDetail = "verbose"
+)
+
 const (
 	Info    Level = "info"
 	Warning Level = "warning"
@@ -65,6 +73,7 @@ type Options struct {
 	DiagnosticIcons DiagnosticIcons
 	SyntaxTheme     SyntaxTheme
 	ASCIISymbols    bool
+	Detail          DiagnosticDetail
  Links bool
  LinkEditor string
 	Preset          *SemanticPreset
@@ -169,6 +178,9 @@ func Classify(s string) Level {
 }
 
 func New(opts Options) *Engine {
+	if opts.Detail == "" {
+		opts.Detail = DetailNormal
+	}
 	if opts.Mode == "" {
 		opts.Mode = Enhance
 	}

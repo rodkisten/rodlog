@@ -39,7 +39,7 @@ func fileHyperlinkLabel(file, label string, line, column int, opts Options) stri
 
 func renderLinkedDiagnostic(d *Diagnostic, opts Options) []byte {
  icons:=resolveDiagnosticIcons(opts.DiagnosticIcons,!opts.ASCIISymbols)
- raw:=renderDiagnosticWithTheme(d,opts.SemanticColors,icons,opts.SyntaxTheme)
+ raw:=renderDiagnosticWithDetail(d,opts.SemanticColors,icons,opts.SyntaxTheme,opts.Detail)
  if !opts.Links || d==nil { return raw }
  code:=d.Code
  if d.Tool==TypeScript && len(code)>2 && strings.HasPrefix(code,"TS") && strings.Trim(code[2:],"0123456789")=="" {

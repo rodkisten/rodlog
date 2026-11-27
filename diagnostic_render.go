@@ -166,12 +166,12 @@ func renderDiagnosticWithDetail(d *Diagnostic, colors SemanticColors, icons Diag
 	}
 
 	for _, note := range d.Notes {
-		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(infoColor, icons.Note), note)
+		fmt.Fprintf(&out, "  %s %s %s\n", wrapANSI(infoColor, icons.Note), wrapANSI(infoColor, "note:"), note)
 	}
 	for _, help := range d.Help {
-		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), icons.Help), help)
+		fmt.Fprintf(&out, "  %s %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), icons.Help), wrapANSI(semanticColor(colors.Success, "32"), "help:"), help)
 	}
-	renderRelatedDiagnostics(&out, d, colors, icons, theme)
+	renderRelatedDiagnostics(&out, d, colors, icons, theme, detail)
 	return []byte(out.String())
 }
 

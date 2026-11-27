@@ -1,181 +1,28 @@
-# Extended synthetic tsc diagnostic session (representative, not captured)
---- run 1 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 2 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 3 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 4 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 5 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 6 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 7 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 8 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 9 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 10 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 11 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
---- run 12 ---
-> workspace@1.0.0 typecheck
-> tsc --noEmit --pretty false
-
-src/components/Button.tsx(14,9): error TS2322: Type 'number' is not assignable to type 'string'.
-src/components/Button.tsx(21,5): error TS2741: Property 'label' is missing in type '{}'.
-src/hooks/useProfile.ts(38,17): error TS18048: 'user' is possibly 'undefined'.
-src/api/client.ts(57,12): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
-src/pages/Settings.tsx(8,2): warning TS6133: 'unused' is declared but its value is never read.
-src/pages/Settings.tsx(32,4): error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/utils/format.ts(12,11): error TS2554: Expected 2 arguments, but got 1.
-src/config/env.ts(9,3): error TS2304: Cannot find name 'processEnv'.
-src/main.ts(4,1): error TS2307: Cannot find module './missing' or its corresponding type declarations.
-src/components/Form.tsx(66,18): error TS2322: Type 'boolean' is not assignable to type 'number'.
-Found 9 errors and 1 warning.
+{"tool":"typescript","level":"error","code":"TS2322","message":"Type 'number' is not assignable to type 'string'.","file":"examples/case-1.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const label: string = 42;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2345","message":"Argument of type 'number' is not assignable to parameter of type 'string'.","file":"examples/case-2.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","renderLabel(42);","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2339","message":"Property 'name' does not exist on type 'User'.","file":"examples/case-3.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","user.name;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2304","message":"Cannot find name 'missing'.","file":"examples/case-4.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","console.log(missing);","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2307","message":"Cannot find module './missing' or its corresponding type declarations.","file":"examples/case-5.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","import x from './missing';","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2554","message":"Expected 2 arguments, but got 1.","file":"examples/case-6.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","combine('a');","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS7006","message":"Parameter 'value' implicitly has an 'any' type.","file":"examples/case-7.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","function parse(value) { return value; }","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS18048","message":"'user' is possibly 'undefined'.","file":"examples/case-8.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","user.name;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS18047","message":"'user' is possibly 'null'.","file":"examples/case-9.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","user.name;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS18046","message":"'error' is of type 'unknown'.","file":"examples/case-10.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","error.message;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2741","message":"Property 'id' is missing in type '{}' but required in type 'User'.","file":"examples/case-11.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const user: User = {};","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2349","message":"This expression is not callable.","file":"examples/case-12.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","count();","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2769","message":"No overload matches this call.","file":"examples/case-13.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","new Date(true);","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2300","message":"Duplicate identifier 'User'.","file":"examples/case-14.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","type User = string;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2454","message":"Variable 'value' is used before being assigned.","file":"examples/case-15.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","console.log(value);","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2588","message":"Cannot assign to 'count' because it is a constant.","file":"examples/case-16.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","count = 2;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2365","message":"Operator '+' cannot be applied to types 'number' and 'boolean'.","file":"examples/case-17.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const result = 1 + true;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS7053","message":"Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.","file":"examples/case-18.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const value = obj[key];","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2322","message":"Type '{ title: number; }' is not assignable to type 'Props'.","file":"examples/case-19.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const view = <Button title={42} />;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS1005","message":"';' expected.","file":"examples/case-20.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const value = 1 const other = 2;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS1109","message":"Expression expected.","file":"examples/case-21.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const value = ;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS6133","message":"'unused' is declared but its value is never read.","file":"examples/case-22.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const unused = 42;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2344","message":"Type 'number' does not satisfy the constraint 'string'.","file":"examples/case-23.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","type Result = Box<number>;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS2532","message":"Object is possibly 'undefined'.","file":"examples/case-24.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","items[0].name;","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS7027","message":"Unreachable code detected.","file":"examples/case-25.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","console.log('unreachable');","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS7030","message":"Not all code paths return a value.","file":"examples/case-26.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","function choose(flag: boolean) { if (flag) return 1; }","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS4114","message":"This member must have an 'override' modifier.","file":"examples/case-27.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","render() { return null; }","// Following source context","// End of example"]}
+{"tool":"typescript","level":"error","code":"TS1360","message":"Type '{}' does not satisfy the expected type 'Config'.","file":"examples/case-28.tsx","line":3,"column":7,"source_lines":["// Synthetic diagnostic example","// Relevant source context","const config = {} satisfies Config;","// Following source context","// End of example"]}

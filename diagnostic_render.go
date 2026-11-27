@@ -118,7 +118,9 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 		}
 	}
 
-	if len(d.Spans) > 0 && hasEmbeddedSource(d.Spans) {
+	if len(d.SourceLines)>0 {
+ out.WriteString(renderSourceContext(d,d.SourceLines,theme))
+ } else if len(d.Spans) > 0 && hasEmbeddedSource(d.Spans) {
 		out.WriteString(renderDiagnosticSpans(d.Spans, levelColor, colors, theme))
 	} else if d.File != "" && d.Line > 0 && d.Line <= maxDiagnosticLineNumber {
 		if frame := diagnosticFrame(d, theme); frame != "" {

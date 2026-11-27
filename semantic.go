@@ -1,6 +1,8 @@
 package rodlog
 
 import (
+ "encoding/json"
+ "os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,7 +16,10 @@ type Diagnostic struct {
 	Line    int    `json:"line,omitempty"`
 	Column  int    `json:"column,omitempty"`
 	Message string `json:"message"`
-	Spans []DiagnosticSpan `json:"spans,omitempty"`
+	SourceLines []string `json:"source_lines,omitempty"`
+ ContextBefore *int `json:"context_before,omitempty"`
+ ContextAfter *int `json:"context_after,omitempty"`
+ Spans []DiagnosticSpan `json:"spans,omitempty"`
 	Notes []string `json:"notes,omitempty"`
 	Help []string `json:"help,omitempty"`
 	Related []*Diagnostic `json:"related,omitempty"`
@@ -44,6 +49,7 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 		tool = Detect(line)
 	}
 	d := &Diagnostic{Tool: tool, Level: Error}
+ for key, target := range map[string]**int{"RODLOG_CONTEXT_BEFORE": &d.ContextBefore, "RODLOG_CONTEXT_AFTER": &d.ContextAfter} { if n,err:=strconv.Atoi(os.Getenv(key)); err==nil { *target=&n } }
 	switch tool {
 	case Rust:
 		return parseRustDiagnostic(line)
@@ -62,6 +68,7 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 			return d
 		}
 	case TypeScript:
+		if strings.HasPrefix(line,"{") { var structured Diagnostic; if json.Unmarshal([]byte(line), &structured)==nil && structured.Tool==TypeScript && structured.Code!="" && structured.Message!="" { structured.ContextBefore=d.ContextBefore; structured.ContextAfter=d.ContextAfter; return &structured } }
 		for _, re := range []*regexp.Regexp{tsLocation, tsColon} {
 			if m := re.FindStringSubmatch(line); m != nil {
 				d.File = m[1]

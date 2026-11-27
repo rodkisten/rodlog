@@ -62,6 +62,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("rodlog", flag.ContinueOnError)
 	flags.String("config", configPath, "TOML configuration file")
 	flags.SetOutput(stderr)
+ contextBefore := flags.Int("context-before", envInt("RODLOG_CONTEXT_BEFORE",2), "source lines before diagnostic (0-20)")
+ contextAfter := flags.Int("context-after", envInt("RODLOG_CONTEXT_AFTER",2), "source lines after diagnostic (0-20)")
 
 	// Core streaming & output flags
 	mode := flags.String("mode", env("RODLOG_MODE", fallback(config.Mode, "enhance")), "raw|enhance|transform")
@@ -117,7 +119,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
-	if *mode != "raw" && *mode != "enhance" && *mode != "transform" {
+	if *contextBefore<0 || *contextBefore>20 || *contextAfter<0 || *contextAfter>20 { fmt.Fprintln(stderr,"context must be between 0 and 20"); return 2 }
+ for key,value:=range map[string]int{"RODLOG_CONTEXT_BEFORE":*contextBefore,"RODLOG_CONTEXT_AFTER":*contextAfter} { old,ok:=os.LookupEnv(key); os.Setenv(key,strconv.Itoa(value)); defer func(k,v string, exists bool){ if exists { os.Setenv(k,v) } else { os.Unsetenv(k) } }(key,old,ok) }
+ if *mode != "raw" && *mode != "enhance" && *mode != "transform" {
 		fmt.Fprintln(stderr, "invalid mode:", *mode)
 		return 2
 	}

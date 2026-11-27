@@ -39,8 +39,16 @@ func diagnosticFrame(d *Diagnostic, themes ...SyntaxTheme) string {
 
 	theme := SyntaxTheme{}
 	if len(themes) > 0 { theme = themes[0] }
-	first := max(1, d.Line-2)
-	last := min(len(lines), d.Line+2)
+	return renderSourceContext(d, lines, theme)
+}
+
+func renderSourceContext(d *Diagnostic, lines []string, theme SyntaxTheme) string {
+ if d.Line < 1 || d.Line > len(lines) { return "" }
+ before, after := 2, 2
+ if d.ContextBefore != nil { before = min(20,max(0,*d.ContextBefore)) }
+ if d.ContextAfter != nil { after = min(20,max(0,*d.ContextAfter)) }
+ first := max(1,d.Line-before)
+ last := min(len(lines),d.Line+after)
 
 	var b strings.Builder
 	for i := first; i <= last; i++ {
@@ -50,6 +58,8 @@ func diagnosticFrame(d *Diagnostic, themes ...SyntaxTheme) string {
 		lineText := highlightSourceLine(lines[i-1], d.File, theme)
 		if isTarget {
 			marker = styleActiveMarker.Render(">")
+		} else {
+			lineText = wrapANSI("2", ansiPattern.ReplaceAllString(lineText, ""))
 		}
 
 		gutter := styleGutter.Render(fmt.Sprintf("%4d |", i))

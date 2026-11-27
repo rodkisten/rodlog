@@ -77,6 +77,16 @@ func newDockerBuildSteps() *dockerBuildSteps {
 }
 
 func (s *dockerBuildSteps) format(text string) (string, bool) {
+	// BuildKit reuses step IDs across independent builds.
+	if strings.HasPrefix(text, "#0 building with ") {
+		clear(s.numbers)
+		clear(s.children)
+		clear(s.totals)
+		s.next = 0
+		s.lastKey = ""
+		return text, true
+	}
+
 	if m := buildKitFinalError.FindStringSubmatch(text); m != nil {
 		badge := dockerFinalErrorStyle.Render("✖ STEP " + m[1] + " ERROR")
 		return badge + "  " + m[2] + "\n", true
@@ -144,7 +154,8 @@ func (s *dockerBuildSteps) tryFormatHeader(text string) (string, bool) {
 	}
 
 	if _, exists := s.numbers[key]; exists {
-		return "", false
+		// Preserve repeated headers without emitting another card.
+		return text, true
 	}
 
 	s.next++
@@ -289,5 +300,5 @@ func renderSGR(text string, codes ...string) string {
 		return text
 	}
 
-	return "\x1b[" + strings.Join(valid, ";") + "m" + text + "\x1b[0m"
+	return "\x1b[" + strings.Join(valid, "m\x1b[") + "m" + text + "\x1b[0m"
 }

@@ -37,6 +37,16 @@ jobs:
               else print
               fflush()
             }'
+      - name: TypeScript intelligence adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check cmd/rodlog/typescript-intelligence.mjs
+          empty_dir="$(mktemp -d)"
+          output="$(cd "$empty_dir" && node "$GITHUB_WORKSPACE/cmd/rodlog/typescript-intelligence.mjs" 2>&1 || true)"
+          printf '%s\n' "$output"
+          grep -q '"code":"RODLOGTS001"' <<<"$output"
+          ! grep -q 'Require stack:' <<<"$output"
       - name: Shell hook checks
         run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'
       - name: "Fixture preview: npm"

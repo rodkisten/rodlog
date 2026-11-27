@@ -1,0 +1,13 @@
+# Synthetic pnpm fixture: representative output, not captured
+Scope: all 4 workspace projects
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 128, reused 120, downloaded 8, added 128
+Packages: +128
+ WARN  deprecated inflight@1.0.6
+Done in 2.4s using pnpm
+ WARN  Issues with peer dependencies found
+└─┬ @example/ui 1.0.0
+  └── ✕ unmet peer react@^18.0.0: found 19.0.0
+ ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with package.json
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @example/web@1.0.0 build: `tsc --noEmit`
+Exit status 1

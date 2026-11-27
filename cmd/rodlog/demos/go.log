@@ -1,0 +1,2 @@
+./main.go:12:8: cannot use name (variable of type string) as int value in assignment
+./main.go:18:2: declared and not used: result

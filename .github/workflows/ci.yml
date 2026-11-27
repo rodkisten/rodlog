@@ -73,6 +73,8 @@ jobs:
       - name: "Fixture preview: Go compiler"
         if: ${{ !cancelled() }}
         run: '"$RUNNER_TEMP/rodlog" --mode=transform --color=always --tool=go < testdata/go.log'
+      - name: Embedded demos
+        run: '"$RUNNER_TEMP/rodlog" demo all'
   publish-preview:
     needs: validate
     if: github.ref == 'refs/heads/feat/standalone-foundation' && github.event_name != 'pull_request'

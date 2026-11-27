@@ -20,6 +20,8 @@ import (
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
 		switch args[0] {
+		case "demo":
+			return runDemo(args[1:], stdout, stderr)
 		case "tools":
 			for _, spec := range rodlog.ToolInventory() {
 				fmt.Fprintf(stdout, "%s\t%s\t%s\n", spec.Tool, spec.Commands[0], spec.Description)

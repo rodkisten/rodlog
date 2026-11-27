@@ -139,7 +139,9 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 
 	infoColor := semanticColor(colors.Info, "36")
 
-	if explanation := diagnosticExplanation(d); explanation != "" {
+	if pair := tsTypePair.FindStringSubmatch(message); d.Tool == TypeScript && pair != nil && (d.Code == "TS2322" || d.Code == "TS2345") {
+		fmt.Fprintf(&out, "  Expected: %s\n  Received: %s\n", wrapANSI(semanticColor(colors.Success, "32"), pair[2]), wrapANSI(semanticColor(colors.Error, "31"), pair[1]))
+	} else if explanation := diagnosticExplanation(d); explanation != "" {
 		prefix := iconOrDefault(icons.Explanation, "↳")
 		fmt.Fprintf(&out, "  %s\n", wrapANSI(infoColor, prefix+" "+explanation))
 	}

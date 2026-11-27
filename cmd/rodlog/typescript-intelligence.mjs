@@ -123,6 +123,22 @@ if (!config || !fs.existsSync(config)) {
 }
 
 const projectDir = path.dirname(config);
+
+function normalizedPath(fileName) {
+  return path.resolve(fileName).split(path.sep).join('/');
+}
+
+function isProjectFile(fileName) {
+  const absolute = normalizedPath(fileName);
+  const root = normalizedPath(projectDir).replace(/\/$/, '') + '/';
+  return absolute.startsWith(root) && !absolute.includes('/node_modules/');
+}
+
+function displayPath(fileName) {
+  if (isProjectFile(fileName)) return path.relative(projectDir, fileName);
+  return path.relative(process.cwd(), fileName);
+}
+
 const ts = loadTypeScript(projectDir);
 if (!ts?.sys || !ts?.readConfigFile || !ts?.createProgram) {
   fatal(
@@ -146,7 +162,7 @@ function diagnostic(d) {
   if (d.file && d.start !== undefined) {
     const p = d.file.getLineAndCharacterOfPosition(d.start);
     const end = d.file.getLineAndCharacterOfPosition(d.start + (d.length || 1));
-    result.file = path.relative(process.cwd(), d.file.fileName);
+    result.file = displayPath(d.file.fileName);
     result.line = p.line + 1;
     result.column = p.character + 1;
     result.spans = [{
@@ -157,7 +173,11 @@ function diagnostic(d) {
       primary: true,
     }];
   }
-  if (d.relatedInformation) result.related = d.relatedInformation.map(diagnostic);
+  if (d.relatedInformation) {
+    result.related = d.relatedInformation
+      .filter(item => !item.file || isProjectFile(item.file.fileName))
+      .map(diagnostic);
+  }
   return result;
 }
 
@@ -190,17 +210,20 @@ function addSymbol(result, symbol, node, label) {
   if (!symbol) return;
   if (symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
   const flags = ts.TypeFormatFlags.NoTruncation;
-  for (const decl of (symbol.getDeclarations() || []).slice(0, 3)) {
+  for (const decl of (symbol.getDeclarations() || []).filter(decl => isProjectFile(decl.getSourceFile().fileName)).slice(0, 3)) {
     const file = decl.getSourceFile();
     const p = file.getLineAndCharacterOfPosition(decl.getStart());
     const location = {
-      file: path.relative(process.cwd(), file.fileName),
+      file: displayPath(file.fileName),
       line: p.line + 1,
       column: p.character + 1,
     };
-    if (result.related?.some(item =>
-      item.file === location.file && item.line === location.line && item.column === location.column
-    )) continue;
+    if (
+      (result.file === location.file && result.line === location.line && result.column === location.column)
+      || result.related?.some(item =>
+        item.file === location.file && item.line === location.line && item.column === location.column
+      )
+    ) continue;
 
     const name = checker.symbolToString(symbol);
     const signature = ts.isTypeAliasDeclaration(decl)
@@ -229,13 +252,13 @@ for (const d of diagnostics) {
     const call = enclosingCall(d.file, d.start);
     const sig = call && checker.getResolvedSignature(call);
     const decl = sig?.getDeclaration();
-    if (decl) {
+    if (decl && isProjectFile(decl.getSourceFile().fileName)) {
       const file = decl.getSourceFile();
       const p = file.getLineAndCharacterOfPosition(decl.getStart());
       (result.related ??= []).push({
         tool: 'typescript',
         level: 'info',
-        file: path.relative(process.cwd(), file.fileName),
+        file: displayPath(file.fileName),
         line: p.line + 1,
         column: p.character + 1,
         message: 'Defined here (resolved or recovery signature)',

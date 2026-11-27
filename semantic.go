@@ -68,7 +68,7 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 			return d
 		}
 	case TypeScript:
-		if strings.HasPrefix(line,"{") { var structured Diagnostic; if json.Unmarshal([]byte(line), &structured)==nil && structured.Tool==TypeScript && structured.Code!="" && structured.Message!="" { structured.ContextBefore=d.ContextBefore; structured.ContextAfter=d.ContextAfter; return &structured } }
+		if strings.HasPrefix(line,"{") { var structured Diagnostic; if json.Unmarshal([]byte(line), &structured)==nil && structured.Tool==TypeScript && structured.Code!="" && structured.Message!="" { if d.ContextBefore!=nil { structured.ContextBefore=d.ContextBefore }; if d.ContextAfter!=nil { structured.ContextAfter=d.ContextAfter }; return &structured } }
 		for _, re := range []*regexp.Regexp{tsLocation, tsColon} {
 			if m := re.FindStringSubmatch(line); m != nil {
 				d.File = m[1]

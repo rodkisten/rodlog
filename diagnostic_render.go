@@ -93,7 +93,7 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	if len(themes) > 0 { theme = themes[0] }
 	heading, levelColor := resolveDiagnosticHeader(d.Level, colors, icons)
 	location := formatDiagnosticLocation(d)
-	if hasEmbeddedSource(d.Spans) { location = "" }
+	if hasEmbeddedSource(d.Spans) || len(d.SourceLines)>0 { location = "" }
 
 	codeBadge := ""
 	if d.Code != "" {
@@ -119,6 +119,7 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	}
 
 	if len(d.SourceLines)>0 {
+ fmt.Fprintf(&out,"  %s %s\n",wrapANSI(levelColor,"-->"),formatDiagnosticLocation(d))
  out.WriteString(renderSourceContext(d,d.SourceLines,theme))
  } else if len(d.Spans) > 0 && hasEmbeddedSource(d.Spans) {
 		out.WriteString(renderDiagnosticSpans(d.Spans, levelColor, colors, theme))

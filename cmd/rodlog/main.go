@@ -62,6 +62,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("rodlog", flag.ContinueOnError)
 	flags.String("config", configPath, "TOML configuration file")
 	flags.SetOutput(stderr)
+ links := flags.String("links", env("RODLOG_LINKS","auto"), "auto|always|never")
+ linkEditor := flags.String("link-editor", env("RODLOG_LINK_EDITOR","file"), "file|vscode|cursor")
  contextBefore := flags.Int("context-before", envInt("RODLOG_CONTEXT_BEFORE",2), "source lines before diagnostic (0-20)")
  contextAfter := flags.Int("context-after", envInt("RODLOG_CONTEXT_AFTER",2), "source lines after diagnostic (0-20)")
 
@@ -142,7 +144,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	themeBundle, themeErr := rodlog.ResolveTheme(*themeName)
+	if (*links!="auto" && *links!="always" && *links!="never") || (*linkEditor!="file" && *linkEditor!="vscode" && *linkEditor!="cursor") { fmt.Fprintln(stderr,"invalid link settings"); return 2 }
+ themeBundle, themeErr := rodlog.ResolveTheme(*themeName)
 	if themeErr != nil {
 		fmt.Fprintln(stderr, themeErr)
 		return 2
@@ -240,6 +243,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		SemanticColors:  semanticColors,
 		DiagnosticIcons: icons,
 		SyntaxTheme:     syntaxTheme,
+ Links: *output=="terminal" && (*links=="always" || (*links=="auto" && isTerminal(stdout) && os.Getenv("TERM")!="dumb")),
+ LinkEditor: *linkEditor,
 		Preset:          preset,
 	})
 

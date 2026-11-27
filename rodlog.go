@@ -65,6 +65,8 @@ type Options struct {
 	SemanticColors  SemanticColors
 	DiagnosticIcons DiagnosticIcons
 	SyntaxTheme     SyntaxTheme
+ Links bool
+ LinkEditor string
 	Preset          *SemanticPreset
 }
 
@@ -476,7 +478,7 @@ func (sp *streamProcessor) trackDiagnosticGroup(diag *Diagnostic) (skip bool, er
 	sp.grouped[group][diag.Level]++
 
 	if group != sp.lastGroup {
-		if _, writeErr := fmt.Fprintf(sp.dst, "\n\x1b[1;36m▸ %s\x1b[0m\n", group); writeErr != nil {
+		if _, writeErr := fmt.Fprintf(sp.dst, "\n\x1b[1;36m▸ %s\x1b[0m\n", fileHyperlink(group, 0, 0, sp.opts)); writeErr != nil {
 			return false, writeErr
 		}
 		sp.lastGroup = group
@@ -496,15 +498,15 @@ func (sp *streamProcessor) writeSummary() error {
 	slices.Sort(groups)
 
 	for _, name := range groups {
-		_, err := fmt.Fprintf(sp.dst, "  \x1b[2m%s\x1b[0m  \x1b[31m%d errors\x1b[0m · \x1b[33m%d warnings\x1b[0m\n",
-			name, sp.grouped[name][Error], sp.grouped[name][Warning])
+		_, err := fmt.Fprintf(sp.dst, "  \x1b[2m%s\x1b[0m  \x1b[31m%s\x1b[0m · \x1b[33m%s\x1b[0m\n",
+			name, diagnosticCount(sp.grouped[name][Error], "error"), diagnosticCount(sp.grouped[name][Warning], "warning"))
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err := fmt.Fprintf(sp.dst, "\n\x1b[1mDiagnostics: \x1b[31m%d errors\x1b[0m, \x1b[33m%d warnings\x1b[0m\n",
-		sp.counts[Error], sp.counts[Warning])
+	_, err := fmt.Fprintf(sp.dst, "\n\x1b[1mDiagnostics: \x1b[31m%s\x1b[0m, \x1b[33m%s\x1b[0m\n",
+		diagnosticCount(sp.counts[Error], "error"), diagnosticCount(sp.counts[Warning], "warning"))
 	return err
 }
 
@@ -517,7 +519,7 @@ func Render(ev Event, opts Options) []byte {
 	hasExistingANSI := ansiPattern.MatchString(text)
 
 	if ev.Diagnostic != nil && opts.Mode == Transform && !hasExistingANSI {
-		return renderDiagnosticWithTheme(ev.Diagnostic, opts.SemanticColors, opts.DiagnosticIcons, opts.SyntaxTheme)
+		return renderLinkedDiagnostic(ev.Diagnostic, opts)
 	}
 	if hasExistingANSI {
 		return []byte(text)

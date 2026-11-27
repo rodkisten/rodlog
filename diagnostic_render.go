@@ -115,7 +115,9 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 		}
 	}
 
-	if d.File != "" && d.Line > 0 && d.Line <= maxDiagnosticLineNumber {
+	if len(d.Spans) > 0 && hasEmbeddedSource(d.Spans) {
+		out.WriteString(renderDiagnosticSpans(d.Spans, levelColor, colors))
+	} else if d.File != "" && d.Line > 0 && d.Line <= maxDiagnosticLineNumber {
 		if frame := diagnosticFrame(d); frame != "" {
 			out.WriteString(frame)
 		}
@@ -144,6 +146,17 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 		fmt.Fprintf(&out, "  %s\n", wrapANSI(infoColor, prefix+" "+suggestion))
 	}
 
+	for _, note := range d.Notes {
+		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(infoColor, "note:"), note)
+	}
+	for _, help := range d.Help {
+		fmt.Fprintf(&out, "  %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), "help:"), help)
+	}
+	for _, related := range d.Related {
+		if related != nil {
+			fmt.Fprintf(&out, "  %s %s: %s\n", wrapANSI(infoColor, "related:"), formatDiagnosticLocation(related), related.Message)
+		}
+	}
 	return []byte(out.String())
 }
 

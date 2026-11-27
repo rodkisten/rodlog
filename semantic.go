@@ -14,6 +14,10 @@ type Diagnostic struct {
 	Line    int    `json:"line,omitempty"`
 	Column  int    `json:"column,omitempty"`
 	Message string `json:"message"`
+	Spans []DiagnosticSpan `json:"spans,omitempty"`
+	Notes []string `json:"notes,omitempty"`
+	Help []string `json:"help,omitempty"`
+	Related []*Diagnostic `json:"related,omitempty"`
 }
 
 var (
@@ -51,6 +55,7 @@ func ParseDiagnostic(tool Tool, input string) *Diagnostic {
 					d.Level = Warning
 				}
 				d.Code, d.Message = m[5], m[6]
+				d.Spans = []DiagnosticSpan{{File: d.File, Line: d.Line, Column: d.Column, Primary: true}}
 				return d
 			}
 		}

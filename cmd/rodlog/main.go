@@ -20,7 +20,9 @@ import (
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
 		switch args[0] {
-		case "demo":
+		case "tsc":
+            return runTypeScript(args[1:], stdin, stdout, stderr)
+        case "demo":
 			return runDemo(args[1:], stdout, stderr)
 		case "tools":
 			for _, spec := range rodlog.ToolInventory() {

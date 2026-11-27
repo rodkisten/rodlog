@@ -30,8 +30,10 @@ func TestDiagnosticFrameAndSummary(t *testing.T) {
 	if err := New(Options{Tool: TypeScript, Mode: Transform, Color: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
 		t.Fatal(err)
 	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	if !strings.Contains(out.String(), "\x1b[38;") { t.Fatal("expected source syntax highlighting") }
 	for _, want := range []string{"const b = 2", "^", "1 errors", "1 warnings"} {
-		if !strings.Contains(out.String(), want) {
+		if !strings.Contains(plain, want) {
 			t.Fatalf("missing %q in %q", want, out.String())
 		}
 	}

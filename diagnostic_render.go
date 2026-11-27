@@ -167,6 +167,8 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	for _, related := range d.Related {
 		if related != nil {
 			fmt.Fprintf(&out, "  %s %s: %s\n", wrapANSI(infoColor, "related:"), formatDiagnosticLocation(related), related.Message)
+ if related.Signature != "" { fmt.Fprintf(&out, "    %s\n", highlightSourceLine(related.Signature, "signature.ts", theme)) }
+ if related.Documentation != "" { fmt.Fprintf(&out, "    %s\n", wrapANSI("2", related.Documentation)) }
 		}
 	}
 	return []byte(out.String())

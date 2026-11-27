@@ -23,6 +23,8 @@ type Diagnostic struct {
 	Notes []string `json:"notes,omitempty"`
 	Help []string `json:"help,omitempty"`
 	Related []*Diagnostic `json:"related,omitempty"`
+ Signature string `json:"signature,omitempty"`
+ Documentation string `json:"documentation,omitempty"`
 }
 
 var (

@@ -32,7 +32,7 @@ func TestDiagnosticFrameAndSummary(t *testing.T) {
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	if !strings.Contains(out.String(), "\x1b[38;") { t.Fatal("expected source syntax highlighting") }
-	for _, want := range []string{"const b = 2", "^", "1 errors", "1 warnings"} {
+	for _, want := range []string{"const b = 2", "^", "1 error", "1 warning"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing %q in %q", want, out.String())
 		}

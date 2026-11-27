@@ -1,0 +1,6 @@
+{
+  "name": "rodlog-typescript-intelligence-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Intentionally broken TypeScript project used to exercise rodlog semantic diagnostics."
+}

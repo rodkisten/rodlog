@@ -47,6 +47,33 @@ jobs:
           printf '%s\n' "$output"
           grep -q '"code":"RODLOGTS001"' <<<"$output"
           ! grep -q 'Require stack:' <<<"$output"
+      - name: "TypeScript intelligence: huge real project fixture"
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$GITHUB_WORKSPACE/testdata/typescript-intelligence"
+          npm install --prefix "$fixture" --no-package-lock --ignore-scripts --no-audit --no-fund typescript@latest
+
+          set +e
+          "$RUNNER_TEMP/rodlog" tsc             --project "$fixture/tsconfig.json"             --color=always             --links=never             --context-before=1             --context-after=1             > "$RUNNER_TEMP/typescript-intelligence.log" 2>&1
+          status=$?
+          set -e
+
+          cat "$RUNNER_TEMP/typescript-intelligence.log"
+          test "$status" -eq 1
+
+          diagnostics="$(grep -Ec 'TS[0-9]+' "$RUNNER_TEMP/typescript-intelligence.log" || true)"
+          test "$diagnostics" -ge 30
+
+          grep -q 'TS2322' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'TS2345' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'TS2769\|TS2554' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'Defined here\|declared here' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'errors-assignments.ts' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'errors-generics.ts' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'errors-control-flow.ts' "$RUNNER_TEMP/typescript-intelligence.log"
+
+          printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
       - name: Shell hook checks
         run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'
       - name: "Fixture preview: npm"

@@ -19,7 +19,23 @@ jobs:
           go-version-file: go.mod
           cache: false
       - run: go mod tidy
-      - run: go vet ./...
-      - run: go test -race ./...
-      - run: bash scripts/test-shell-hook.sh
-      - run: go build ./cmd/rodlog
+      - name: Build rodlog
+        run: go build -o "$RUNNER_TEMP/rodlog" ./cmd/rodlog
+      - name: Static analysis
+        run: '"$RUNNER_TEMP/rodlog" exec --color=always -- go vet ./...'
+      - name: Tests (verbose, colored, race detector)
+        shell: bash
+        run: |
+          set -o pipefail
+          "$RUNNER_TEMP/rodlog" exec --color=always -- go test -v -race -count=1 ./... |
+            awk '{
+              if ($0 ~ /\x1b\[/) print
+              else if ($0 ~ /--- PASS:|^PASS$|^ok[[:space:]]/) printf "\033[32m%s\033[0m\n", $0
+              else if ($0 ~ /--- FAIL:|^FAIL/) printf "\033[31m%s\033[0m\n", $0
+              else if ($0 ~ /--- SKIP:/) printf "\033[33m%s\033[0m\n", $0
+              else if ($0 ~ /=== RUN/) printf "\033[36m%s\033[0m\n", $0
+              else print
+              fflush()
+            }'
+      - name: Shell hook checks
+        run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'

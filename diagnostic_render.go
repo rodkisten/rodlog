@@ -146,7 +146,8 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	infoColor := semanticColor(colors.Info, "36")
 
 	if pair := tsTypePair.FindStringSubmatch(message); d.Tool == TypeScript && pair != nil && (d.Code == "TS2322" || d.Code == "TS2345") {
-		fmt.Fprintf(&out, "  Expected: %s\n  Received: %s\n", wrapANSI(semanticColor(colors.Success, "32"), pair[2]), wrapANSI(semanticColor(colors.Error, "31"), pair[1]))
+		expected, received := highlightTypeDifference(pair[2], pair[1], colors)
+		fmt.Fprintf(&out, "  Expected: %s\n  Received: %s\n", expected, received)
 	} else if explanation := diagnosticExplanation(d); explanation != "" {
 		prefix := iconOrDefault(icons.Explanation, "↳")
 		fmt.Fprintf(&out, "  %s\n", wrapANSI(infoColor, prefix+" "+explanation))
@@ -223,4 +224,16 @@ func highlightTypeScriptMessage(message string, colors SemanticColors) string {
  return tsOverload.ReplaceAllStringFunc(message, func(match string) string {
   return wrapANSI(semanticColor(colors.Warning, "33"), match)
  })
+}
+
+// highlightTypeDifference preserves shared prefix/suffix and emphasizes changed runes.
+func highlightTypeDifference(expected, received string, colors SemanticColors) (string, string) {
+ a, b := []rune(expected), []rune(received)
+ prefix, suffix := 0, 0
+ for prefix < len(a) && prefix < len(b) && a[prefix] == b[prefix] { prefix++ }
+ for suffix < len(a)-prefix && suffix < len(b)-prefix && a[len(a)-1-suffix] == b[len(b)-1-suffix] { suffix++ }
+ render := func(value []rune, color string) string {
+  return wrapANSI("2", string(value[:prefix])) + wrapANSI("1;"+color, string(value[prefix:len(value)-suffix])) + wrapANSI("2", string(value[len(value)-suffix:]))
+ }
+ return render(a, semanticColor(colors.Success,"32")), render(b, semanticColor(colors.Error,"31"))
 }

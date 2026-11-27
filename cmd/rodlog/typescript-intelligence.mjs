@@ -32,9 +32,18 @@ function resolveConfig(input) {
 
 const baseRequire = createRequire(import.meta.url);
 
+function normalizeTypeScript(mod) {
+  // Newer TypeScript package layouts may expose the compiler through a
+  // CommonJS/ESM interop default export. Always return the compiler object
+  // that owns sys/readConfigFile rather than the wrapper namespace.
+  if (mod?.sys && mod?.readConfigFile) return mod;
+  if (mod?.default?.sys && mod?.default?.readConfigFile) return mod.default;
+  return mod;
+}
+
 function packageRequire(base) {
   const req = createRequire(path.join(base, 'package.json'));
-  return req(req.resolve('typescript'));
+  return normalizeTypeScript(req(req.resolve('typescript')));
 }
 
 function typescriptFromExecutable() {
@@ -50,7 +59,7 @@ function typescriptFromExecutable() {
       if (fs.existsSync(manifest)) {
         try {
           if (JSON.parse(fs.readFileSync(manifest, 'utf8')).name === 'typescript') {
-            return baseRequire(dir);
+            return normalizeTypeScript(baseRequire(dir));
           }
         } catch {}
       }
@@ -66,7 +75,7 @@ function typescriptFromExecutable() {
 function loadTypeScript(projectDir) {
   if (process.env.RODLOG_TYPESCRIPT) {
     try {
-      return baseRequire(path.resolve(process.env.RODLOG_TYPESCRIPT));
+      return normalizeTypeScript(baseRequire(path.resolve(process.env.RODLOG_TYPESCRIPT)));
     } catch {}
   }
 
@@ -79,7 +88,7 @@ function loadTypeScript(projectDir) {
   for (const [command, args] of [['npm', ['root', '-g']], ['pnpm', ['root', '-g']]]) {
     try {
       const root = execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-      if (root) return baseRequire(path.join(root, 'typescript'));
+      if (root) return normalizeTypeScript(baseRequire(path.join(root, 'typescript')));
     } catch {}
   }
 
@@ -97,7 +106,7 @@ if (!config || !fs.existsSync(config)) {
 
 const projectDir = path.dirname(config);
 const ts = loadTypeScript(projectDir);
-if (!ts) {
+if (!ts?.sys || !ts?.readConfigFile || !ts?.createProgram) {
   fatal(
     'RODLOGTS002',
     `TypeScript compiler could not be resolved for ${projectDir}`,

@@ -69,6 +69,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
  linkEditor := flags.String("link-editor", env("RODLOG_LINK_EDITOR","file"), "file|vscode|cursor")
  contextBefore := flags.Int("context-before", envInt("RODLOG_CONTEXT_BEFORE",2), "source lines before diagnostic (0-20)")
  contextAfter := flags.Int("context-after", envInt("RODLOG_CONTEXT_AFTER",2), "source lines after diagnostic (0-20)")
+ symbols := flags.String("symbols", env("RODLOG_SYMBOLS", fallback(config.Symbols, "auto")), "auto|unicode|ascii")
 
 	// Core streaming & output flags
 	mode := flags.String("mode", env("RODLOG_MODE", fallback(config.Mode, "enhance")), "raw|enhance|transform")

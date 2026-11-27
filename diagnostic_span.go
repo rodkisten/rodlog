@@ -28,13 +28,15 @@ func renderDiagnosticSpans(spans []DiagnosticSpan, levelColor string, colors Sem
 	theme := SyntaxTheme{}
 	if len(themes) > 0 { theme = themes[0] }
 	var out strings.Builder
+	lastFile := ""
 	for _, span := range spans {
 		if span.Source == "" || span.Line < 1 { continue }
 		source := strings.ReplaceAll(strings.ReplaceAll(span.Source, "\r", ""), "\n", " ")
 		source = ansiPattern.ReplaceAllString(source, "")
 		color := semanticColor(colors.Info, "36")
 		if span.Primary { color = levelColor }
-		if span.File != "" {
+		if span.File != "" && span.File != lastFile {
+			lastFile = span.File
 			fmt.Fprintf(&out, "  %s %s:%d:%d\n", wrapANSI(color, "-->"), span.File, span.Line, span.Column)
 		}
 		gutter := fmt.Sprintf("%4d │", span.Line)

@@ -93,18 +93,19 @@ func renderDiagnosticWithTheme(d *Diagnostic, colors SemanticColors, icons Diagn
 	if len(themes) > 0 { theme = themes[0] }
 	heading, levelColor := resolveDiagnosticHeader(d.Level, colors, icons)
 	location := formatDiagnosticLocation(d)
+	if hasEmbeddedSource(d.Spans) { location = "" }
 
 	codeBadge := ""
 	if d.Code != "" {
-		codeBadge = " [" + d.Code + "]"
+		codeBadge = " " + wrapANSI(semanticColor(colors.Info, "36"), "[" + d.Code + "]")
 	}
 
 	var out strings.Builder
 	out.Grow(defaultDiagBufferBytes + len(d.Message))
 
-	fmt.Fprintf(&out, "%s  %s%s\n",
+	fmt.Fprintf(&out, "%s%s%s\n",
 		wrapANSI("1;"+levelColor, heading),
-		wrapANSI(semanticColor(colors.Location, "2"), location),
+		wrapANSI(semanticColor(colors.Location, "2"), strings.TrimRight("  "+location, " ")),
 		codeBadge,
 	)
 

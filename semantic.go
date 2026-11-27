@@ -32,7 +32,7 @@ var (
 )
 
 func ParseDiagnostic(tool Tool, input string) *Diagnostic {
-	line := strings.TrimSpace(ansi.ReplaceAllString(input, ""))
+	line := strings.TrimSpace(ansiPattern.ReplaceAllString(input, ""))
 	if line == "" {
 		return nil
 	}

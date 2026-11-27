@@ -15,7 +15,7 @@ func TestGCloudDiagnosticCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plain := ansi.ReplaceAllString(out.String(), "")
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, s := range []string{"GCLOUD ERROR", "run.deploy", "PERMISSION_DENIED", "Possible fixes:", "╭"} {
 		if !strings.Contains(plain, s) {
 			t.Errorf("missing %q: %q", s, plain)
@@ -31,7 +31,7 @@ func TestWranglerDiagnosticCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plain := ansi.ReplaceAllString(out.String(), "")
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, s := range []string{"WRANGLER ERROR", "Authentication error", "10000", "wrangler login", "╭"} {
 		if !strings.Contains(plain, s) {
 			t.Errorf("missing %q: %q", s, plain)

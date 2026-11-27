@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func stripColors(s string) string { return ansi.ReplaceAllString(s, "") }
+func stripColors(s string) string { return ansiPattern.ReplaceAllString(s, "") }
 
 func TestHighlightTools(t *testing.T) {
 	cases := []struct {

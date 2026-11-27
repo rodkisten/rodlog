@@ -26,7 +26,7 @@ var (
 func ParseDiagnosticCard(tool Tool, lines []string) DiagnosticCard {
 	d := DiagnosticCard{Tool: tool}
 	for _, line := range lines {
-		clean := strings.TrimSpace(ansi.ReplaceAllString(line, ""))
+		clean := strings.TrimSpace(ansiPattern.ReplaceAllString(line, ""))
 		if clean == "" {
 			continue
 		}

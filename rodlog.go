@@ -81,7 +81,7 @@ const (
 	maxCardBytes           = 64 * 1024
 )
 
-var ansi = regexp.MustCompile("\x1b\[[0-9;]*[A-Za-z]")
+var ansiPattern = regexp.MustCompile("\x1b\\[[0-9;]*[A-Za-z]")
 
 var toolDetectionOrder = []Tool{
 	TypeScript,
@@ -508,7 +508,7 @@ func Render(ev Event, opts Options) []byte {
 	}
 
 	text := ev.Text
-	hasExistingANSI := ansi.MatchString(text)
+	hasExistingANSI := ansiPattern.MatchString(text)
 
 	if ev.Diagnostic != nil && opts.Mode == Transform && !hasExistingANSI {
 		return renderDiagnosticWithTheme(ev.Diagnostic, opts.SemanticColors, opts.DiagnosticIcons)

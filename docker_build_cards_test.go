@@ -25,7 +25,7 @@ func TestDockerBuildStepCards(t *testing.T) {
 	if strings.Count(got, "\x1b[48;5;238m\x1b[97;1m STEP 2 ") != 1 {
 		t.Errorf("duplicate card: %q", got)
 	}
-	if !strings.Contains(ansi.ReplaceAllString(got, ""), "#12 [builder 2/3] RUN npm ci") {
+	if !strings.Contains(ansiPattern.ReplaceAllString(got, ""), "#12 [builder 2/3] RUN npm ci") {
 		t.Errorf("repeated header was silently dropped: %q", got)
 	}
 }
@@ -215,7 +215,7 @@ func TestDockerNestedBuildKitOutput(t *testing.T) {
 	if err := New(Options{Mode: Enhance, Tool: Auto, Color: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
 		t.Fatal(err)
 	}
-	plain := ansi.ReplaceAllString(out.String(), "")
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, expected := range []string{"STEP 1", "load build definition", "STEP 1.1/1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "STEP 3.1/3", "transferring context: 2B done", "STEP 7", "STEP 7.1/4", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1", "╰──"} {
 		if !strings.Contains(plain, expected) {
 			t.Errorf("missing %q in output: %s", expected, plain)

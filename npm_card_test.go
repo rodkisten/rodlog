@@ -14,7 +14,7 @@ func TestNPMMultilineCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := ansi.ReplaceAllString(out.String(), "")
+	got := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, part := range []string{"NPM ERROR", "Missing script", "npm run", "Debug log:", "╭", "╰"} {
 		if !strings.Contains(got, part) {
 			t.Errorf("missing %q: %q", part, got)

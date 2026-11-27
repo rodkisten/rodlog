@@ -42,7 +42,7 @@ func TestExtendedLogFixtures(t *testing.T) {
 			if err := New(Options{Tool: tc.tool, Mode: Transform, Color: true}).Process(context.Background(), bytes.NewReader(raw), &transformed); err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(strings.ToLower(ansi.ReplaceAllString(transformed.String(), "")), strings.ToLower(tc.want)) || !strings.Contains(transformed.String(), "\x1b[") {
+			if !strings.Contains(strings.ToLower(ansiPattern.ReplaceAllString(transformed.String(), "")), strings.ToLower(tc.want)) || !strings.Contains(transformed.String(), "\x1b[") {
 				t.Fatalf("missing diagnostic %q or ANSI in transformed fixture (output bytes=%d)", tc.want, transformed.Len())
 			}
 		})

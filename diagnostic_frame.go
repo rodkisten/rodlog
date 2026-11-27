@@ -59,7 +59,7 @@ func renderSourceContext(d *Diagnostic, lines []string, theme SyntaxTheme) strin
 		if isTarget {
 			marker = styleActiveMarker.Render(">")
 		} else {
-			lineText = wrapANSI("2", ansiPattern.ReplaceAllString(lineText, ""))
+			lineText = wrapANSI("2;90", ansiPattern.ReplaceAllString(lineText, ""))
 		}
 
 		gutter := styleGutter.Render(fmt.Sprintf("%4d |", i))
@@ -68,7 +68,9 @@ func renderSourceContext(d *Diagnostic, lines []string, theme SyntaxTheme) strin
 		if isTarget && d.Column > 0 && d.Column < 512 {
 			padding := strings.Repeat(" ", visualColumn(lines[i-1], d.Column))
 			emptyGutter := styleGutter.Render("         |")
-			pointer := stylePointer.Render("^")
+			end := d.Column+1
+ for _, span := range d.Spans { if span.Line==i && span.Column==d.Column && span.EndColumn>end { end=min(span.EndColumn,513) } }
+ pointer := stylePointer.Render(strings.Repeat("^",max(1,visualColumn(lines[i-1],end)-visualColumn(lines[i-1],d.Column))))
 			fmt.Fprintf(&b, "%s %s%s\n", emptyGutter, padding, pointer)
 		}
 	}

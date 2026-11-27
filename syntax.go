@@ -126,6 +126,8 @@ func highlightSourceLine(source, file string, theme SyntaxTheme) string {
 		}
 	}
 	source = expanded.String()
+ trimmed := strings.TrimSpace(source)
+ if strings.HasPrefix(trimmed,"//") || strings.HasPrefix(trimmed,"/*") || strings.HasPrefix(trimmed,"*/") { return wrapANSI("2;90",source) }
 	lang := theme.Lexer
 	if lang == "" {
 		if lexer := lexers.Match(file); lexer != nil { lang = lexer.Config().Name }

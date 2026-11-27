@@ -210,12 +210,17 @@ func wrapANSI(sgrCode, text string) string {
 }
 
 // Highlight actual and expected types without changing the compiler message.
-var tsMessageTypes = regexp.MustCompile(`(?i)(?:argument of )?type '([^']+)' (?:is not assignable to (?:type|parameter of type)|does not satisfy the constraint) '([^']+)'`)
+var tsMessageTypes = regexp.MustCompile(`(?i)(?:argument of )?type '(.+?)' (?:is not assignable to (?:type|parameter of type)|does not satisfy the constraint) '(.+?)'(?:[.!]?$|[.]\s|:\s)`)
+var tsPropertyTypes = regexp.MustCompile(`(?i)property '(.+?)' (?:does not exist on type|is missing in type) '(.+?)'(?:[.!]?$|[.]\s| but )`)
+var tsOverload = regexp.MustCompile(`(?i)(overload [0-9]+ of [0-9]+|no overload matches this call)`)
 
 func highlightTypeScriptMessage(message string, colors SemanticColors) string {
- return tsMessageTypes.ReplaceAllStringFunc(message, func(match string) string {
-  spans := tsMessageTypes.FindStringSubmatchIndex(match)
-  if len(spans) != 6 { return match }
-  return match[:spans[2]] + wrapANSI(semanticColor(colors.Error,"31"),match[spans[2]:spans[3]]) + match[spans[3]:spans[4]] + wrapANSI(semanticColor(colors.Success,"32"),match[spans[4]:spans[5]]) + match[spans[5]:]
+ for _, pattern := range []*regexp.Regexp{tsMessageTypes, tsPropertyTypes} {
+  spans := pattern.FindStringSubmatchIndex(message)
+  if len(spans) != 6 { continue }
+  return message[:spans[2]] + wrapANSI(semanticColor(colors.Error, "31"), message[spans[2]:spans[3]]) + message[spans[3]:spans[4]] + wrapANSI(semanticColor(colors.Success, "32"), message[spans[4]:spans[5]]) + message[spans[5]:]
+ }
+ return tsOverload.ReplaceAllStringFunc(message, func(match string) string {
+  return wrapANSI(semanticColor(colors.Warning, "33"), match)
  })
 }

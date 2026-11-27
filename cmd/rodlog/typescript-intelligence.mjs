@@ -26,6 +26,28 @@ function enclosingCall(node,pos){
  if(pos<node.getFullStart()||pos>=node.getEnd())return;
  return ts.forEachChild(node,n=>enclosingCall(n,pos)) || (ts.isCallExpression(node)||ts.isNewExpression(node)?node:undefined);
 }
+// Resolve actual compiler symbols rather than guessing names from error text.
+function deepestNode(node,pos){
+ if(pos<node.getFullStart()||pos>=node.getEnd())return;
+ return ts.forEachChild(node,n=>deepestNode(n,pos)) || node;
+}
+function addSymbol(result,symbol,node,label){
+ if(!symbol)return;
+ if(symbol.flags & ts.SymbolFlags.Alias) symbol=checker.getAliasedSymbol(symbol);
+ const flags=ts.TypeFormatFlags.NoTruncation;
+ for(const decl of (symbol.getDeclarations()||[]).slice(0,3)){
+  const file=decl.getSourceFile(), p=file.getLineAndCharacterOfPosition(decl.getStart());
+  const location={file:path.relative(process.cwd(),file.fileName),line:p.line+1,column:p.character+1};
+  if(result.related?.some(r=>r.file===location.file&&r.line===location.line&&r.column===location.column))continue;
+  const name=checker.symbolToString(symbol);
+  const signature=ts.isTypeAliasDeclaration(decl)
+   ? 'type '+name+' = '+decl.type.getText(file)
+   : ts.isInterfaceDeclaration(decl)
+    ? 'interface '+name+(decl.typeParameters?.length?'<'+decl.typeParameters.map(t=>t.getText(file)).join(', ')+'>':'')
+    : name+': '+checker.typeToString(checker.getTypeOfSymbolAtLocation(symbol,decl),node,flags);
+  (result.related??=[]).push({tool:'typescript',level:'info',...location,message:label,signature,documentation:ts.displayPartsToString(symbol.getDocumentationComment(checker))});
+ }
+}
 const diagnostics=[...parsed.errors,...ts.getPreEmitDiagnostics(program)];
 for(const d of diagnostics){
  const result=diagnostic(d);
@@ -36,6 +58,16 @@ for(const d of diagnostics){
   if(decl){
    const file=decl.getSourceFile(), p=file.getLineAndCharacterOfPosition(decl.getStart());
    (result.related??=[]).push({tool:'typescript',level:'info',file:path.relative(process.cwd(),file.fileName),line:p.line+1,column:p.character+1,message:'Defined here (resolved or recovery signature)',signature:checker.signatureToString(sig),documentation:ts.displayPartsToString(sig.getDocumentationComment(checker))});
+  }
+  const node=deepestNode(d.file,d.start);
+  if(node){
+   addSymbol(result,checker.getSymbolAtLocation(node),node,'Symbol declared here');
+   const type=checker.getTypeAtLocation(node);
+   addSymbol(result,type.aliasSymbol||type.getSymbol(),node,'Type declared here');
+   if(ts.isExpression(node)){
+    const expected=checker.getContextualType(node);
+    if(expected)addSymbol(result,expected.aliasSymbol||expected.getSymbol(),node,'Expected type declared here');
+   }
   }
  }
  emit(result);

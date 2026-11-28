@@ -37,7 +37,9 @@ func isPNPMOutput(input string) bool {
 	return false
 }
 
-func highlightPNPM(input string, colors SemanticColors) (string, bool) {
+func highlightPNPM(input string, opts Options) (string, bool) {
+	colors := opts.SemanticColors
+	icons := resolveDiagnosticIcons(opts.DiagnosticIcons, !opts.ASCIISymbols)
 	trimmedRight := strings.TrimRight(input, "\r\n")
 	ending := input[len(trimmedRight):]
 	line := strings.TrimSpace(ansiPattern.ReplaceAllString(trimmedRight, ""))
@@ -52,7 +54,7 @@ func highlightPNPM(input string, colors SemanticColors) (string, bool) {
 
 	if m := pnpmProgress.FindStringSubmatch(line); m != nil {
 		parts := []string{
-			wrapANSI(info, "◆ pnpm"),
+			wrapANSI(info, toolLabel(PNPM, opts)),
 			wrapANSI(muted, "resolved")+" "+wrapANSI(info, m[1]),
 			wrapANSI(muted, "reused")+" "+wrapANSI(success, m[2]),
 			wrapANSI(muted, "downloaded")+" "+wrapANSI(info, m[3]),
@@ -64,7 +66,7 @@ func highlightPNPM(input string, colors SemanticColors) (string, bool) {
 		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(success, "packages "+m[1]) + ending, true
 	}
 	if m := pnpmDone.FindStringSubmatch(line); m != nil {
-		return wrapANSI(success, "✓ pnpm") + "  " + wrapANSI(success, "done") + " " + wrapANSI(muted, m[1]) + ending, true
+		return wrapANSI(success, icons.Success+" pnpm") + "  " + wrapANSI(success, "done") + " " + wrapANSI(muted, m[1]) + ending, true
 	}
 	if m := pnpmScope.FindStringSubmatch(line); m != nil {
 		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(muted, "scope") + " " + m[1] + ending, true
@@ -73,14 +75,14 @@ func highlightPNPM(input string, colors SemanticColors) (string, bool) {
 		return wrapANSI(success, "✓ pnpm") + "  " + line + ending, true
 	}
 	if strings.Contains(line, "peer dependencies") {
-		return wrapANSI(warning, "⚠ pnpm") + "  " + line + ending, true
+		return wrapANSI(warning, icons.Warning+" pnpm") + "  " + line + ending, true
 	}
 	if m := pnpmDiagnostic.FindStringSubmatch(line); m != nil {
 		level := warning
-		symbol := "⚠"
+		symbol := icons.Warning
 		if strings.HasPrefix(m[1], "ERR_") {
 			level = semanticColor(colors.Error, "31")
-			symbol = "✖"
+			symbol = icons.Error
 		}
 		return wrapANSI(level, symbol+" "+m[1]) + "  " + m[2] + ending, true
 	}
@@ -97,19 +99,14 @@ func pnpmProgressCount(input string) int {
 	return n
 }
 
-func pnpmNestedLabel(tool Tool) string {
+func toolLabel(tool Tool, opts Options) string {
+	icons := resolveDiagnosticIcons(opts.DiagnosticIcons, !opts.ASCIISymbols)
+	name := string(tool)
 	switch tool {
-	case PNPM:
-		return "◆ pnpm"
 	case TypeScript:
-		return "◆ tsc"
-	case NPM:
-		return "◆ npm"
+		name = "tsc"
 	case GoCompiler:
-		return "◆ go"
-	case Rust:
-		return "◆ rust"
-	default:
-		return fmt.Sprintf("◆ %s", tool)
+		name = "go"
 	}
+	return fmt.Sprintf("%s %s", icons.Definition, name)
 }

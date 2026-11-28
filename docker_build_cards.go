@@ -183,7 +183,7 @@ func (s *dockerBuildSteps) tryFormatHeader(text string) (string, bool) {
 
 	badge := renderSGR(badgeText, s.colors.BadgeBackground, s.colors.BadgeText)
 	if tool := s.stepTools[key]; tool != Generic {
-		badge += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), pnpmNestedLabel(tool))
+		badge += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolLabel(tool, s.opts))
 	}
 	sep := renderSGR(s.separator, s.colors.Separator)
 
@@ -216,17 +216,21 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 		tool = s.stepTools[key]
 	}
 
-	branch := dockerTreeBranchStyle.Render("  ╰── ")
+	branchGlyph := "  ╰── "
+	if s.opts.ASCIISymbols {
+		branchGlyph = "  +-- "
+	}
+	branch := dockerTreeBranchStyle.Render(branchGlyph)
 	styledLabel := dockerChildLabelStyle.Render(label)
 	if tool != Generic {
-		styledLabel += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), pnpmNestedLabel(tool))
+		styledLabel += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolLabel(tool, s.opts))
 	}
 
 	rendered := renderDockerNestedBody(tool, body, s.opts)
 	if elapsed != "" {
 		rendered = wrapANSI("2", elapsed+"s") + "  " + rendered
 	}
-	return branch + styledLabel + "\n" + indentDockerNested(rendered) + "\n"
+	return branch + styledLabel + "\n" + indentDockerNested(rendered, s.opts.ASCIISymbols) + "\n"
 }
 
 func detectDockerRunTool(command string) Tool {
@@ -277,13 +281,17 @@ func renderDockerNestedBody(tool Tool, body string, opts Options) string {
 	return strings.TrimRight(string(Render(event, opts)), "\r\n")
 }
 
-func indentDockerNested(rendered string) string {
+func indentDockerNested(rendered string, ascii bool) string {
 	lines := strings.Split(strings.TrimRight(rendered, "\r\n"), "\n")
+	continuation := "     │ "
+	if ascii {
+		continuation = "     | "
+	}
 	for i := range lines {
 		if i == 0 {
 			lines[i] = "     " + lines[i]
 		} else {
-			lines[i] = "     │ " + lines[i]
+			lines[i] = continuation + lines[i]
 		}
 	}
 	return strings.Join(lines, "\n")

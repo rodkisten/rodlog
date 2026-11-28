@@ -548,7 +548,7 @@ func Render(ev Event, opts Options) []byte {
 		}
 	}
 	if ev.Tool == PNPM {
-		if colored, ok := highlightPNPM(text, opts.SemanticColors); ok {
+		if colored, ok := highlightPNPM(text, opts); ok {
 			return []byte(colored)
 		}
 	}

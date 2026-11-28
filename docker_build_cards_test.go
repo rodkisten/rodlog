@@ -277,3 +277,23 @@ func TestDetectDockerRunToolUsesShellAST(t *testing.T) {
 		}
 	}
 }
+
+
+func TestDockerNestedSymbolsRespectASCII(t *testing.T) {
+	input := "#14 [build 1/1] RUN pnpm install\n#14 1.0 Progress: resolved 9, reused 8, downloaded 1, added 9\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true, ASCIISymbols: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, forbidden := range []string{"◆", "╰", "│"} {
+		if strings.Contains(plain, forbidden) {
+			t.Fatalf("unicode symbol %q leaked in ASCII mode: %q", forbidden, plain)
+		}
+	}
+	for _, want := range []string{"+--", "* pnpm", "resolved", "9"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("missing ASCII nested symbol %q in %q", want, plain)
+		}
+	}
+}

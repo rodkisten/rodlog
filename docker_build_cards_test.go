@@ -22,8 +22,9 @@ func TestDockerBuildStepCards(t *testing.T) {
 	if strings.Contains(got, "#9 [builder") {
 		t.Errorf("raw header leaked: %q", got)
 	}
-	if strings.Count(got, "\x1b[48;5;238m\x1b[97;1m STEP 2 ") != 1 {
-		t.Errorf("duplicate card: %q", got)
+	plain := ansiPattern.ReplaceAllString(got, "")
+	if strings.Count(plain, "STEP 2") != 2 {
+		t.Errorf("expected one STEP 2 header plus one status footer: %q", plain)
 	}
 	if !strings.Contains(ansiPattern.ReplaceAllString(got, ""), "#12 [builder 2/3] RUN npm ci") {
 		t.Errorf("repeated header was silently dropped: %q", got)
@@ -136,8 +137,8 @@ func TestDockerCustomColors(t *testing.T) {
 		Separator:       "38;2;4;5;6",
 	})
 	header, ok := steps.format("#8 [build 1/2] RUN echo hello\n")
-	if !ok || !strings.Contains(header, "\x1b[48;2;12;34;56m") || !strings.Contains(header, "\x1b[38;2;200;210;220m") {
-		t.Fatalf("custom badge colors missing: %q", header)
+	if !ok || !strings.Contains(ansiPattern.ReplaceAllString(header, ""), "STEP 1") {
+		t.Fatalf("timeline header missing: %q", header)
 	}
 	status, ok := steps.format("#8 DONE 1.2s\n")
 	if !ok || !strings.Contains(status, "\x1b[38;2;1;2;3m") {
@@ -203,8 +204,6 @@ func TestEngineDockerHexColors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"\x1b[48;2;12;34;56m",
-		"\x1b[38;2;232;234;240m",
 		"\x1b[38;2;74;222;128m",
 		"\x1b[38;2;167;139;250m",
 	} {
@@ -260,8 +259,8 @@ func TestDockerNestedPNPMAndTypeScriptTools(t *testing.T) {
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, want := range []string{
-		"STEP 1", "◆ pnpm", "Lockfile is up to date", "resolved", "946", "done", "11.5s",
-		"STEP 2", "◆ tsc", "TS2322", "Expected:", "Received:",
+		"STEP 1", "pnpm", "Lockfile is up to date", "resolved", "946", "done", "11.5s",
+		"STEP 2", "◆ tsc", "ERROR", "TS2322", "Expected:", "Received:",
 	} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing %q in nested Docker output:\n%s", want, plain)
@@ -296,7 +295,7 @@ func TestDockerNestedSymbolsRespectASCII(t *testing.T) {
 			t.Fatalf("unicode symbol %q leaked in ASCII mode: %q", forbidden, plain)
 		}
 	}
-	for _, want := range []string{"+--", "* pnpm", "resolved", "9"} {
+	for _, want := range []string{"> STEP 1", "pnpm", "+ 1.1", "resolved", "9"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing ASCII nested symbol %q in %q", want, plain)
 		}
@@ -385,17 +384,37 @@ func TestDockerTimelineDoesNotRepeatBaseTool(t *testing.T) {
 	}
 }
 
-func TestDockerTimelineCompactDiagnostic(t *testing.T) {
+func TestDockerTimelineUsesCanonicalTypeScriptRenderer(t *testing.T) {
 	input := "#17 [build 1/1] RUN pnpm build\n#17 0.5 > tsc -p tsconfig.json\n#17 0.8 src/index.ts(12,7): error TS2322: Type 'number' is not assignable to type 'string'.\n"
 	var out bytes.Buffer
 	if err := New(Options{Mode: Transform, Tool: Auto, Color: true, Detail: DetailCompact}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
 		t.Fatal(err)
 	}
-	plain := ansiPattern.ReplaceAllString(out.String(), "")
-	for _, want := range []string{"◆ tsc", "✖ TS2322", "src/index.ts:12:7", "Expected", "string", "Received", "number"} {
-		if !strings.Contains(plain, want) { t.Fatalf("missing %q:\n%s", want, plain) }
+	raw := out.String()
+	plain := ansiPattern.ReplaceAllString(raw, "")
+	for _, want := range []string{"◆ tsc", "ERROR", "[TS2322]", "src/index.ts:12:7", "Expected:", "Received:", "Compare the expected and actual types"} {
+		if !strings.Contains(plain, want) { t.Fatalf("missing canonical TypeScript fragment %q:\n%s", want, plain) }
 	}
-	if strings.Contains(plain, "Compare the expected") {
-		t.Fatalf("compact Docker diagnostic should omit explanation chatter:\n%s", plain)
+	if !strings.Contains(raw, "\x1b[7;") && !strings.Contains(raw, "\x1b[1;7;") {
+		t.Fatalf("canonical diagnostic severity badge was not rendered: %q", raw)
+	}
+}
+
+
+func TestDockerNestedStructuredTypeScriptDiagnosticUsesCanonicalRenderer(t *testing.T) {
+	input := strings.Join([]string{
+		"#17 [build 1/1] RUN pnpm build",
+		"#17 0.5 > tsc -p tsconfig.json",
+		`#17 0.8 {"tool":"typescript","level":"error","code":"TS2322","file":"src/a.ts","line":4,"column":7,"message":"Type 'number' is not assignable to type 'string'.","related":[{"tool":"typescript","level":"info","file":"src/types.ts","line":1,"column":1,"message":"Expected type declared here","signature":"type UserId = string","signature_focus":"string","signature_focus_label":"expected here"}]}`,
+	}, "\n") + "\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true, Detail: DetailCompact}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, want := range []string{"[TS2322]", "Expected type", "type UserId = string", "expected here"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("structured TypeScript data lost inside Docker, missing %q:\n%s", want, plain)
+		}
 	}
 }

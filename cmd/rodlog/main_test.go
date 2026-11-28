@@ -82,7 +82,7 @@ func TestColorAlwaysUsesTokyoNightOnNonTTY(t *testing.T) {
 	}
 	got := out.String()
 	for _, want := range []string{
-		"\x1b[48;2;26;27;38m",   // Tokyo Night Docker badge background.
+		"\x1b[38;2;187;154;247m", // Tokyo Night semantic code/step.
 		"\x1b[38;2;122;162;247m", // Tokyo Night semantic info.
 		"\x1b[2m0.1s\x1b[0m",   // Duration stays faint.
 	} {

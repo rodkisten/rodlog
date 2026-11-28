@@ -1,6 +1,7 @@
 package rodlog
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"regexp"
@@ -229,7 +230,7 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 		tool = baseTool
 	}
 
-	if diag := ParseDiagnostic(tool, body); diag != nil && s.opts.Mode == Transform {
+	if diag := parseNestedDockerDiagnostic(tool, body); diag != nil && s.opts.Mode == Transform {
 		return renderDockerNestedDiagnostic(number, child, elapsed, tool, baseTool, diag, s.opts)
 	}
 
@@ -271,18 +272,36 @@ func renderDockerNestedStep(number, child int, elapsed string, tool, baseTool To
 	return out.String()
 }
 
+func parseNestedDockerDiagnostic(tool Tool, body string) *Diagnostic {
+	clean := strings.TrimSpace(ansiPattern.ReplaceAllString(body, ""))
+	if strings.HasPrefix(clean, "{") {
+		var structured Diagnostic
+		if err := json.Unmarshal([]byte(clean), &structured); err == nil && structured.Message != "" && structured.Tool != "" {
+			if structured.Tool == Auto || structured.Tool == Generic {
+				structured.Tool = tool
+			}
+			return &structured
+		}
+	}
+	return ParseDiagnostic(tool, body)
+}
+
 func renderDockerNestedDiagnostic(number, child int, elapsed string, tool, baseTool Tool, d *Diagnostic, opts Options) string {
-	icons := resolveDiagnosticIcons(opts.DiagnosticIcons, !opts.ASCIISymbols)
-	errorColor := semanticColor(opts.SemanticColors.Error, "31")
-	infoColor := semanticColor(opts.SemanticColors.Info, "36")
-	codeColor := semanticColor(opts.SemanticColors.Code, "35")
-	locationColor := semanticColor(opts.SemanticColors.Location, "36")
+	nestedOpts := opts
+	if nestedOpts.Detail == "" {
+		nestedOpts.Detail = DetailCompact
+	}
+
+	rendered := strings.TrimRight(string(renderLinkedDiagnostic(d, nestedOpts)), "\r\n")
+	if rendered == "" {
+		return ""
+	}
 
 	branch := "├"
-	cont := "  │   "
+	cont := "  │  "
 	if opts.ASCIISymbols {
 		branch = "+"
-		cont = "  |   "
+		cont = "  |  "
 	}
 
 	var out strings.Builder
@@ -291,33 +310,18 @@ func renderDockerNestedDiagnostic(number, child int, elapsed string, tool, baseT
 		fmt.Fprintf(&out, "  %s", dimDockerDuration(elapsed+"s"))
 	}
 	if tool != Generic && tool != baseTool {
-		fmt.Fprintf(&out, "  %s", wrapANSI(infoColor, "◆ "+toolName(tool)))
-	}
-	fmt.Fprintf(&out, "  %s", wrapANSI("1;"+errorColor, icons.Error))
-	if d.Code != "" {
-		fmt.Fprintf(&out, " %s", wrapANSI("1;"+codeColor, d.Code))
+		fmt.Fprintf(&out, "  %s", wrapANSI(semanticColor(opts.SemanticColors.Info, "36"), "◆ "+toolName(tool)))
 	}
 	out.WriteByte('\n')
 
-	location := formatDiagnosticLocation(d)
-	if location != "" {
-		fmt.Fprintf(&out, "%s%s\n", wrapANSI("2", cont), wrapANSI(locationColor, location))
-	}
-	for _, line := range wrapDockerPlain(strings.TrimSpace(d.Message), 50) {
-		fmt.Fprintf(&out, "%s%s\n", wrapANSI("2", cont), highlightTypeScriptMessage(line, opts.SemanticColors))
-	}
-	if pair := tsTypePair.FindStringSubmatch(d.Message); pair != nil {
-		expected, received := highlightTypeDifference(pair[2], pair[1], opts.SemanticColors)
-		fmt.Fprintf(&out, "%s%s  %s  %s  %s\n",
-			wrapANSI("2", cont),
-			wrapANSI(semanticColor(opts.SemanticColors.Success, "32"), "Expected"),
-			expected,
-			wrapANSI(errorColor, "Received"),
-			received,
-		)
+	for _, line := range strings.Split(rendered, "\n") {
+		out.WriteString(wrapANSI("2", cont))
+		out.WriteString(line)
+		out.WriteByte('\n')
 	}
 	return out.String()
 }
+
 
 func toolName(tool Tool) string {
 	switch tool {
@@ -430,7 +434,7 @@ func renderDockerNestedBody(tool Tool, body string, opts Options) string {
 			return strings.TrimRight(colored, "\r\n")
 		}
 	}
-	if diag := ParseDiagnostic(tool, body); diag != nil && opts.Mode == Transform {
+	if diag := parseNestedDockerDiagnostic(tool, body); diag != nil && opts.Mode == Transform {
 		return strings.TrimRight(string(renderLinkedDiagnostic(diag, opts)), "\r\n")
 	}
 	event := Event{Tool: tool, Level: Classify(body), Text: body + "\n"}

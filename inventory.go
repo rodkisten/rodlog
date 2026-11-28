@@ -37,6 +37,19 @@ func DetectCommand(argv []string) Tool {
 		}
 		return Generic
 	}
+	if name == "rodlog" || name == "rodlog.exe" {
+		if len(argv) > 1 && argv[1] == "tsc" {
+			return TypeScript
+		}
+		if len(argv) > 1 && argv[1] == "exec" {
+			for i, arg := range argv[2:] {
+				if arg == "--" && i+3 <= len(argv) {
+					return DetectCommand(argv[i+3:])
+				}
+			}
+		}
+		return Generic
+	}
 	if name == "corepack" || name == "corepack.exe" {
 		if len(argv) > 1 {
 			return DetectCommand(argv[1:])

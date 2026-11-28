@@ -15,6 +15,8 @@ func TestDetectCommand(t *testing.T) {
 		{[]string{"pnpm", "exec", "tsc", "--noEmit"}, TypeScript},
 		{[]string{"pnpm", "--filter", "web", "exec", "tsc", "--noEmit"}, TypeScript},
 		{[]string{"corepack", "pnpm", "install"}, PNPM},
+		{[]string{"rodlog", "tsc", "--transport=jsonl", "-p", "tsconfig.json"}, TypeScript},
+		{[]string{"rodlog", "exec", "--", "pnpm", "build"}, PNPM},
 		{[]string{"echo", "gcloud error"}, Generic},
 		{nil, Generic},
 	}

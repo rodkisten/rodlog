@@ -463,3 +463,36 @@ func TestDockerNestedANSIWrapPreservesHyperlinksAndColors(t *testing.T) {
 		t.Fatalf("OSC8 hyperlink was stripped: %q", got)
 	}
 }
+
+
+func TestDockerDetectsRodlogTypeScriptTransportAsNestedTool(t *testing.T) {
+	if got := detectDockerRunTool("RUN rodlog tsc --transport=jsonl -p tsconfig.json"); got != TypeScript {
+		t.Fatalf("detectDockerRunTool transport=%s want typescript", got)
+	}
+	structured := `{"tool":"typescript","level":"error","code":"TS2344","message":"Type does not satisfy the constraint.","file":"src/a.ts","line":2,"column":3}`
+	if got := detectNestedDockerTool(structured); got != TypeScript {
+		t.Fatalf("structured nested tool=%s want typescript", got)
+	}
+}
+
+func TestDockerTypeScriptTransportPreservesEnrichedRelatedData(t *testing.T) {
+	input := strings.Join([]string{
+		"#20 [build 1/1] RUN rodlog tsc --transport=jsonl -p tsconfig.json",
+		`#20 0.2 {"tool":"typescript","level":"error","code":"TS2344","file":"src/errors-generics.ts","line":7,"column":27,"message":"Type '{ name: string; }' does not satisfy the constraint '{ id: string; }'.","related":[{"tool":"typescript","level":"info","file":"src/errors-generics.ts","line":3,"column":1,"message":"Generic constraint declared here","signature":"type WithId<T extends { id: string }>","signature_focus":"T extends { id: string }","signature_focus_label":"type argument 1 must satisfy this constraint"}]}`,
+		"#20 ERROR 0.3s",
+	}, "\n") + "\n"
+
+	var out bytes.Buffer
+	if err := New(Options{Mode:Transform, Tool:Auto, Color:true, Detail:DetailNormal}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, want := range []string{
+		"STEP 1", "typescript", "[TS2344]", "Generic constraint",
+		"type WithId<T extends { id: string }>", "type argument 1 must satisfy this constraint",
+	} {
+		if !strings.Contains(plain,want) {
+			t.Fatalf("transport lost %q:\n%s",want,plain)
+		}
+	}
+}

@@ -222,7 +222,9 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 	body := strings.TrimSpace(rawBody)
 
 	baseTool := s.stepTools[key]
+	if baseTool == "" { baseTool = Generic }
 	tool := s.activeTools[key]
+	if tool == "" { tool = Generic }
 	if detected := detectNestedDockerTool(body); detected != Generic && detected != Docker {
 		tool = detected
 		s.activeTools[key] = detected
@@ -414,6 +416,12 @@ func detectDockerRunTool(command string) Tool {
 
 func detectNestedDockerTool(body string) Tool {
 	clean := strings.TrimSpace(ansiPattern.ReplaceAllString(body, ""))
+	if strings.HasPrefix(clean, "{") {
+		var structured Diagnostic
+		if err := json.Unmarshal([]byte(clean), &structured); err == nil && structured.Tool != "" && structured.Tool != Auto && structured.Tool != Generic {
+			return structured.Tool
+		}
+	}
 	if strings.HasPrefix(clean, "> ") {
 		command := strings.TrimSpace(strings.TrimPrefix(clean, "> "))
 		if analysis, err := AnalyzeShell(command, "sh"); err == nil {

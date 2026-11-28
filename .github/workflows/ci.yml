@@ -82,6 +82,37 @@ jobs:
           grep -q 'must satisfy this constraint' "$RUNNER_TEMP/typescript-intelligence.log"
 
           printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
+      - name: "TypeScript intelligence: JSON transport through Docker"
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$GITHUB_WORKSPACE/testdata/typescript-intelligence"
+
+          set +e
+          "$RUNNER_TEMP/rodlog" tsc             --transport=jsonl             --project "$fixture/tsconfig.json"             --context-before=1             --context-after=1             > "$RUNNER_TEMP/typescript-transport.jsonl" 2>&1
+          transport_status=$?
+          set -e
+          test "$transport_status" -eq 1
+
+          # Transport must be raw Diagnostic JSON, not JSONLRenderer Event envelopes.
+          head -n 1 "$RUNNER_TEMP/typescript-transport.jsonl" | grep -q '^{"tool":"typescript"'
+          ! head -n 1 "$RUNNER_TEMP/typescript-transport.jsonl" | grep -q '"sequence"'
+
+          rich="$(grep -m1 '"signature_focus_label"' "$RUNNER_TEMP/typescript-transport.jsonl")"
+          test -n "$rich"
+
+          {
+            printf '%s\n' '#88 [build 1/1] RUN rodlog tsc --transport=jsonl -p tsconfig.json'
+            printf '#88 0.2 %s\n' "$rich"
+            printf '%s\n' '#88 ERROR 0.3s'
+          } > "$RUNNER_TEMP/docker-typescript-transport.log"
+
+          "$RUNNER_TEMP/rodlog"             --color=always             --mode=transform             --tool=auto             --detail=normal             < "$RUNNER_TEMP/docker-typescript-transport.log"             | tee "$RUNNER_TEMP/docker-typescript-rendered.log"
+
+          grep -q 'TS[0-9]' "$RUNNER_TEMP/docker-typescript-rendered.log"
+          grep -q 'expects this parameter\|must satisfy this constraint\|property .* expects this type\|function returns this type' "$RUNNER_TEMP/docker-typescript-rendered.log"
+          grep -q 'Defined here\|Generic constraint\|Expected property\|Return type' "$RUNNER_TEMP/docker-typescript-rendered.log"
+
       - name: Shell hook checks
         run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'
       - name: "Fixture preview: npm"

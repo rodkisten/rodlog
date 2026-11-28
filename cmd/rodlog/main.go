@@ -77,7 +77,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	tool := flags.String("tool", env("RODLOG_TOOL", fallback(config.Tool, "auto")), "auto|npm|typescript|gcloud|wrangler|docker|vitest|node-test|rust|pnpm|go")
 	color := flags.String("color", env("RODLOG_COLOR", fallback(config.Color, "auto")), "auto|always|never")
 	output := flags.String("output", env("RODLOG_OUTPUT", fallback(config.Output, "terminal")), "terminal|jsonl|github")
-	themeName := flags.String("theme", env("RODLOG_THEME", fallback(config.Theme, "default")), "built-in theme: default|tokyo-night|dracula|catppuccin|github-dark|nord")
+	themeName := flags.String("theme", env("RODLOG_THEME", fallback(config.Theme, "tokyo-night")), "built-in theme: default|tokyo-night|dracula|catppuccin|github-dark|nord")
 	cardWidth := flags.Int("card-width", envInt("RODLOG_CARD_WIDTH", config.CardWidth), "max diagnostic card width in columns (24-160)")
 	cardBorder := flags.String("card-border", env("RODLOG_CARD_BORDER", ""), "card border style override: rounded|normal|none")
 

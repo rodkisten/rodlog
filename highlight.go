@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -97,7 +96,7 @@ func highlightLineWithColors(s string, palette SemanticColors) string {
 }
 
 func highlightWithRules(s string, palette SemanticColors, rules []highlightRule) string {
-	if s == "" || len(rules) == 0 || lipgloss.ColorProfile() == 0 {
+	if s == "" || len(rules) == 0 {
 		return s
 	}
 	if strings.Contains(s, "\x1b[") {

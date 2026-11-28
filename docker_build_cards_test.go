@@ -136,12 +136,16 @@ func TestDockerCustomColors(t *testing.T) {
 		Separator:       "38;2;4;5;6",
 	})
 	header, ok := steps.format("#8 [build 1/2] RUN echo hello\n")
-	if !ok || !strings.Contains(header, "\x1b[48;2;12;34;56m") || !strings.Contains(header, "\x1b[38;2;200;210;220m") || !strings.Contains(header, "\x1b[38;2;4;5;6m") {
-		t.Fatalf("custom colors missing: %q", header)
+	if !ok || !strings.Contains(header, "\x1b[48;2;12;34;56m") || !strings.Contains(header, "\x1b[38;2;200;210;220m") {
+		t.Fatalf("custom badge colors missing: %q", header)
 	}
 	status, ok := steps.format("#8 DONE 1.2s\n")
 	if !ok || !strings.Contains(status, "\x1b[38;2;1;2;3m") {
 		t.Fatalf("custom status color missing: %q", status)
+	}
+	second, ok := steps.format("#9 [build 2/2] RUN echo world\n")
+	if !ok || !strings.Contains(second, "\x1b[38;2;4;5;6m") {
+		t.Fatalf("custom separator color missing between top-level steps: %q", second)
 	}
 }
 
@@ -182,7 +186,7 @@ func TestParseDockerColors(t *testing.T) {
 }
 
 func TestEngineDockerHexColors(t *testing.T) {
-	input := "#8 [build 1/2] RUN echo hello\n#8 DONE 1.2s\n"
+	input := "#8 [build 1/2] RUN echo hello\n#8 DONE 1.2s\n#9 [build 2/2] RUN echo world\n"
 	var output bytes.Buffer
 	engine := New(Options{
 		Mode:  Enhance,

@@ -235,8 +235,9 @@ func renderDockerNestedStep(number, child int, elapsed string, tool Tool, render
 
 	label := dockerChildLabelStyle.Render(fmt.Sprintf("%d.%d", number, child))
 	var head strings.Builder
-	head.WriteString(dockerTreeBranchStyle.Render(branch))
-	head.WriteString(label)
+	head.WriteString(wrapANSI("2", branch))
+	labelColor := semanticColor(opts.SemanticColors.Code, "35")
+	head.WriteString(wrapANSI("1;"+labelColor, ansiPattern.ReplaceAllString(label, "")))
 
 	if elapsed != "" {
 		head.WriteString("  ")
@@ -417,10 +418,6 @@ func parseBuildKitBracket(meta string) (stage, total string) {
 }
 
 func renderSGR(text string, codes ...string) string {
-	if lipgloss.ColorProfile() == 0 {
-		return text
-	}
-
 	var valid []string
 	for _, code := range codes {
 		if c := strings.TrimSpace(code); c != "" {

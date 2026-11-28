@@ -18,7 +18,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - run: go mod tidy
+      - name: Verify committed Go module metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          go mod tidy
+          git diff -- go.mod go.sum
+          git diff --exit-code -- go.mod go.sum
       - name: Build rodlog
         run: go build -o "$RUNNER_TEMP/rodlog" ./cmd/rodlog
       - name: Static analysis
@@ -136,7 +142,8 @@ jobs:
       - name: Build portable binaries
         run: |
           set -euo pipefail
-          go mod tidy
+          go mod download
+          go mod verify
           mkdir -p dist
           for os in linux darwin; do
             for arch in amd64 arm64; do

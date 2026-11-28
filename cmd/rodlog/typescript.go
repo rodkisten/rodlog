@@ -61,9 +61,14 @@ func runTypeScript(args []string, stdin io.Reader, stdout, stderr io.Writer) int
   color = "--color=never"
  }
 
- command:=[]string{"exec","--tool=typescript","--mode="+mode}
- if color!="" { command=append(command,color) }
+ command:=[]string{"exec"}
  command=append(command,flags...)
+ // Transport invariants are appended last so duplicate user flags cannot
+ // accidentally wrap or colorize the machine-readable Diagnostic stream.
+ command=append(command,"--tool=typescript","--mode="+mode)
+ if color!="" {
+  command=append(command,color,"--output=terminal")
+ }
  command=append(command,"--","node",f.Name())
  if project!="" { command=append(command,project) }
  return run(command,stdin,stdout,stderr)

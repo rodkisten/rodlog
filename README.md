@@ -7,7 +7,7 @@ A fast Go-powered streaming syntax & semantic highlighter for **npm 📦, TypeSc
 ## 🚀 Quick start
 
 ```bash
-go mod tidy
+go mod download
 go test -race ./...
 go build -o rodlog ./cmd/rodlog
 
@@ -16,6 +16,12 @@ npm run build 2>&1 | ./rodlog --color=always --theme=tokyo-night
 ./rodlog exec --color=always --theme=dracula -- npx tsc --noEmit
 # Lossless enriched TypeScript diagnostics for Docker/BuildKit transport:
 ./rodlog tsc --transport=jsonl -p tsconfig.json
+
+# Generate the huge BuildKit fixture from real Compiler API diagnostics:
+scripts/build-docker-typescript-fixture.sh \
+  ./rodlog \
+  testdata/typescript-intelligence/tsconfig.json \
+  /tmp/rodlog-docker-typescript.log
 ./rodlog themes
 ./rodlog init-config > ~/.config/rodlog/config.toml
 ```
@@ -51,3 +57,30 @@ Docker → pnpm → rodlog tsc --transport=jsonl → TypeScript Intelligence
                                              ↓
                                   canonical terminal renderer
 ```
+
+
+### Generated Docker torture fixture
+
+The Docker + TypeScript torture fixture is generated from the real TypeScript
+intelligence adapter instead of being hand-maintained:
+
+```bash
+scripts/build-docker-typescript-fixture.sh \
+  ./rodlog \
+  testdata/typescript-intelligence/tsconfig.json \
+  /tmp/rodlog-docker-typescript.log
+
+./rodlog \
+  --color=always \
+  --theme=tokyo-night \
+  --syntax-profile=truecolor \
+  --mode=transform \
+  --tool=auto \
+  --detail=normal \
+  --symbols=unicode \
+  < /tmp/rodlog-docker-typescript.log
+```
+
+This fixture transports every enriched diagnostic from the Compiler API through
+a BuildKit-shaped stream. It is intentionally large and acts as a visual and
+semantic regression test for nested TypeScript diagnostics.

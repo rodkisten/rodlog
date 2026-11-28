@@ -488,7 +488,7 @@ func TestDockerTypeScriptTransportPreservesEnrichedRelatedData(t *testing.T) {
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
 	for _, want := range []string{
-		"STEP 1", "typescript", "[TS2344]", "Generic constraint",
+		"STEP 1", "tsc", "[TS2344]", "Generic constraint",
 		"type WithId<T extends { id: string }>", "type argument 1 must satisfy this constraint",
 	} {
 		if !strings.Contains(plain,want) {

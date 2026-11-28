@@ -82,36 +82,33 @@ jobs:
           grep -q 'must satisfy this constraint' "$RUNNER_TEMP/typescript-intelligence.log"
 
           printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
-      - name: "TypeScript intelligence: JSON transport through Docker"
+      - name: "TypeScript intelligence: huge JSON transport through Docker"
         shell: bash
         run: |
           set -euo pipefail
           fixture="$GITHUB_WORKSPACE/testdata/typescript-intelligence"
+          bash -n scripts/build-docker-typescript-fixture.sh
 
-          set +e
-          "$RUNNER_TEMP/rodlog" tsc             --transport=jsonl             --project "$fixture/tsconfig.json"             --context-before=1             --context-after=1             > "$RUNNER_TEMP/typescript-transport.jsonl" 2>&1
-          transport_status=$?
-          set -e
-          test "$transport_status" -eq 1
+          scripts/build-docker-typescript-fixture.sh             "$RUNNER_TEMP/rodlog"             "$fixture/tsconfig.json"             "$RUNNER_TEMP/docker-typescript-intelligence.log"
 
-          # Transport must be raw Diagnostic JSON, not JSONLRenderer Event envelopes.
-          head -n 1 "$RUNNER_TEMP/typescript-transport.jsonl" | grep -q '^{"tool":"typescript"'
-          ! head -n 1 "$RUNNER_TEMP/typescript-transport.jsonl" | grep -q '"sequence"'
+          diagnostics="$(grep -Ec '"code":"TS[0-9]+"' "$RUNNER_TEMP/docker-typescript-intelligence.log" || true)"
+          test "$diagnostics" -ge 30
 
-          rich="$(grep -m1 '"signature_focus_label"' "$RUNNER_TEMP/typescript-transport.jsonl")"
-          test -n "$rich"
+          "$RUNNER_TEMP/rodlog"             --color=always             --theme=tokyo-night             --syntax-profile=truecolor             --mode=transform             --tool=auto             --detail=normal             --symbols=unicode             < "$RUNNER_TEMP/docker-typescript-intelligence.log"             | tee "$RUNNER_TEMP/docker-typescript-rendered.log"
 
-          {
-            printf '%s\n' '#88 [build 1/1] RUN rodlog tsc --transport=jsonl -p tsconfig.json'
-            printf '#88 0.2 %s\n' "$rich"
-            printf '%s\n' '#88 ERROR 0.3s'
-          } > "$RUNNER_TEMP/docker-typescript-transport.log"
+          rendered="$RUNNER_TEMP/docker-typescript-rendered.log"
+          grep -q 'TS2322' "$rendered"
+          grep -q 'TS2345' "$rendered"
+          grep -q 'TS2769\|TS2554' "$rendered"
+          grep -q 'Defined here\|declared here' "$rendered"
+          grep -q 'expects this parameter' "$rendered"
+          grep -q 'must satisfy this constraint' "$rendered"
+          grep -q 'Expected property\|property .* expects this type' "$rendered"
+          grep -q 'Return type\|function returns this type' "$rendered"
+          grep -q 'errors-generics.ts' "$rendered"
+          grep -q 'errors-control-flow.ts' "$rendered"
 
-          "$RUNNER_TEMP/rodlog"             --color=always             --mode=transform             --tool=auto             --detail=normal             < "$RUNNER_TEMP/docker-typescript-transport.log"             | tee "$RUNNER_TEMP/docker-typescript-rendered.log"
-
-          grep -q 'TS[0-9]' "$RUNNER_TEMP/docker-typescript-rendered.log"
-          grep -q 'expects this parameter\|must satisfy this constraint\|property .* expects this type\|function returns this type' "$RUNNER_TEMP/docker-typescript-rendered.log"
-          grep -q 'Defined here\|Generic constraint\|Expected property\|Return type' "$RUNNER_TEMP/docker-typescript-rendered.log"
+          printf '\nValidated %s enriched TypeScript diagnostics through the Docker transport.\n' "$diagnostics"
 
       - name: Shell hook checks
         run: '"$RUNNER_TEMP/rodlog" exec --color=always -- bash scripts/test-shell-hook.sh'

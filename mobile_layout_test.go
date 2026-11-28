@@ -24,7 +24,8 @@ func TestDockerChildUsesSeparateLines(t *testing.T) {
 		t.Fatal("missing header")
 	}
 	got, ok := s.format("#7 0.3 npm ERR! code ERESOLVE\n")
-	if !ok || !strings.Contains(got, "ERESOLVE") || !strings.Contains(got, "├ 1.1") {
+	plain := ansiPattern.ReplaceAllString(got, "")
+	if !ok || !strings.Contains(plain, "ERESOLVE") || !strings.Contains(plain, "├ 1.1") {
 		t.Fatalf("child layout: %q", got)
 	}
 }

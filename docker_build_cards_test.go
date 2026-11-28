@@ -221,7 +221,7 @@ func TestDockerNestedBuildKitOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
-	for _, expected := range []string{"STEP 1", "load build definition", "├─ 1.1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "├─ 3.1", "transferring context: 2B done", "STEP 7", "├─ 7.1", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1"} {
+	for _, expected := range []string{"STEP 1", "load build definition", "├ 1.1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "├ 3.1", "transferring context: 2B done", "STEP 7", "├ 7.1", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1"} {
 		if !strings.Contains(plain, expected) {
 			t.Errorf("missing %q in output: %s", expected, plain)
 		}
@@ -356,7 +356,7 @@ func TestDockerNestedLayoutIsCompactAndDepthBounded(t *testing.T) {
 		t.Fatal(err)
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
-	for _, want := range []string{"├─ 1.1", "◆ tsc", "├─ 1.2", "TS2322"} {
+	for _, want := range []string{"├ 1.1", "◆ tsc", "├ 1.2", "TS2322"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing compact nested fragment %q:\n%s", want, plain)
 		}
@@ -364,7 +364,38 @@ func TestDockerNestedLayoutIsCompactAndDepthBounded(t *testing.T) {
 	if strings.Contains(plain, "STEP 1.1") || strings.Contains(plain, "│  │") {
 		t.Fatalf("nested layout exceeded visual hierarchy:\n%s", plain)
 	}
-	if strings.Count(plain, "◆ pnpm") > 1 {
+	if strings.Count(plain, "pnpm") > 3 {
 		t.Fatalf("pnpm tool label duplicated inside nested body:\n%s", plain)
+	}
+}
+
+
+func TestDockerTimelineDoesNotRepeatBaseTool(t *testing.T) {
+	input := "#14 [build 1/1] RUN pnpm install\n#14 0.1 Progress: resolved 9, reused 8, downloaded 1, added 9\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	if strings.Count(plain, "pnpm") != 2 {
+		t.Fatalf("expected pnpm only in header and command, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "◆ pnpm  ◆ pnpm") {
+		t.Fatalf("duplicated pnpm marker:\n%s", plain)
+	}
+}
+
+func TestDockerTimelineCompactDiagnostic(t *testing.T) {
+	input := "#17 [build 1/1] RUN pnpm build\n#17 0.5 > tsc -p tsconfig.json\n#17 0.8 src/index.ts(12,7): error TS2322: Type 'number' is not assignable to type 'string'.\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true, Detail: DetailCompact}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, want := range []string{"◆ tsc", "✖ TS2322", "src/index.ts:12:7", "Expected", "string", "Received", "number"} {
+		if !strings.Contains(plain, want) { t.Fatalf("missing %q:\n%s", want, plain) }
+	}
+	if strings.Contains(plain, "Compare the expected") {
+		t.Fatalf("compact Docker diagnostic should omit explanation chatter:\n%s", plain)
 	}
 }

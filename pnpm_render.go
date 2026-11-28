@@ -58,16 +58,15 @@ func highlightPNPMMode(input string, opts Options, includeTool bool) (string, bo
 
 	if m := pnpmProgress.FindStringSubmatch(line); m != nil {
 		parts := []string{
-			wrapANSI(info, toolLabel(PNPM, opts)),
 			wrapANSI(muted, "resolved")+" "+wrapANSI(info, m[1]),
-			wrapANSI(muted, "reused")+" "+wrapANSI(success, m[2]),
-			wrapANSI(muted, "downloaded")+" "+wrapANSI(info, m[3]),
-			wrapANSI(muted, "added")+" "+wrapANSI(success, m[4]),
+			wrapANSI(muted, "· reused")+" "+wrapANSI(success, m[2]),
+			wrapANSI(muted, "· downloaded")+" "+wrapANSI(info, m[3]),
+			wrapANSI(muted, "· added")+" "+wrapANSI(success, m[4]),
 		}
-		return strings.Join(parts, "  ") + ending, true
+		return pnpmPrefix(info, opts, includeTool) + strings.Join(parts, " ") + ending, true
 	}
 	if m := pnpmPackages.FindStringSubmatch(line); m != nil {
-		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(success, "packages "+m[1]) + ending, true
+		return pnpmPrefix(info, opts, includeTool) + wrapANSI(success, "packages "+m[1]) + ending, true
 	}
 	if m := pnpmDone.FindStringSubmatch(line); m != nil {
 		prefix := ""
@@ -75,10 +74,12 @@ func highlightPNPMMode(input string, opts Options, includeTool bool) (string, bo
 		return prefix + wrapANSI(success, icons.Success+" done") + " " + dimDockerDuration(m[1]) + ending, true
 	}
 	if m := pnpmScope.FindStringSubmatch(line); m != nil {
-		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(muted, "scope") + " " + m[1] + ending, true
+		return pnpmPrefix(info, opts, includeTool) + wrapANSI(muted, "scope") + " " + m[1] + ending, true
 	}
 	if strings.HasPrefix(line, "Lockfile is up to date") {
-		return wrapANSI(success, "✓ pnpm") + "  " + line + ending, true
+		prefix := ""
+		if includeTool { prefix = wrapANSI(success, icons.Success+" pnpm") + "  " }
+		return prefix + wrapANSI(success, icons.Success+" "+line) + ending, true
 	}
 	if strings.Contains(line, "peer dependencies") {
 		prefix := ""
@@ -97,7 +98,7 @@ func highlightPNPMMode(input string, opts Options, includeTool bool) (string, bo
 		return prefix + wrapANSI(level, symbol+" "+m[1]) + "  " + m[2] + ending, true
 	}
 	// Store and deployment chatter is useful context but should stay quiet.
-	return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(muted, line) + ending, true
+	return pnpmPrefix(info, opts, includeTool) + wrapANSI(muted, line) + ending, true
 }
 
 func pnpmPrefix(color string, opts Options, includeTool bool) string {

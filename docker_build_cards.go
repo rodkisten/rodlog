@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultStepSeparatorWidth = 36
+	defaultStepSeparatorWidth = 28
 	composeMaxServiceWidth    = 24
 	dockerMaxVisualDepth      = 2
 )
@@ -106,10 +106,14 @@ func (s *dockerBuildSteps) format(text string) (string, bool) {
 
 	if m := buildKitStatus.FindStringSubmatch(text); m != nil {
 		if number, ok := s.numbers[m[1]]; ok {
+			icons := resolveDiagnosticIcons(s.opts.DiagnosticIcons, !s.opts.ASCIISymbols)
+			symbol := icons.Success
+			if m[2] == "ERROR" { symbol = icons.Error }
+			if m[2] == "CACHED" { symbol = icons.Info }
 			statusText := s.renderStatus(m[2])
-			stepLabel := dockerStatusStepStyle.Render(fmt.Sprintf("STEP %d", number))
+			stepLabel := wrapANSI("2", fmt.Sprintf("STEP %d", number))
 			duration := dimDockerDurationSuffix(m[3])
-			return fmt.Sprintf("%s  %s%s\n", stepLabel, statusText, duration), true
+			return fmt.Sprintf("%s %s  %s%s\n", wrapANSI(s.statusColor(m[2]), symbol), stepLabel, statusText, duration), true
 		}
 	}
 
@@ -178,26 +182,34 @@ func (s *dockerBuildSteps) tryFormatHeader(text string) (string, bool) {
 		s.totals[key] = total
 	}
 
-	badgeText := fmt.Sprintf(" STEP %d ", s.next)
-	if stage != "" && stage != "internal" && stage != "build" && stage != "builder" {
-		badgeText = fmt.Sprintf(" STEP %d · %s ", s.next, stage)
-	}
-
-	badge := renderSGR(badgeText, s.colors.BadgeBackground, s.colors.BadgeText)
-	if tool := s.stepTools[key]; tool != Generic {
-		badge += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolLabel(tool, s.opts))
-	}
-	coloredCmd := command
-	if highlighted, err := SyntaxHighlight(command, "dockerfile"); err == nil {
-		coloredCmd = strings.TrimRight(highlighted, "\r\n")
-	}
-
 	var out strings.Builder
 	if needsSeparator {
 		out.WriteString(renderSGR(s.separator, "2", s.colors.Separator))
 		out.WriteByte('\n')
 	}
-	fmt.Fprintf(&out, "%s  %s\n", badge, coloredCmd)
+
+	icons := resolveDiagnosticIcons(s.opts.DiagnosticIcons, !s.opts.ASCIISymbols)
+	step := fmt.Sprintf("STEP %d", s.next)
+	if stage != "" && stage != "internal" && stage != "build" && stage != "builder" {
+		step += " · " + stage
+	}
+	fmt.Fprintf(&out, "%s %s", wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), icons.Group), wrapANSI("1;"+semanticColor(s.opts.SemanticColors.Code, "35"), step))
+	if tool := s.stepTools[key]; tool != Generic {
+		fmt.Fprintf(&out, "  %s", wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolName(tool)))
+	}
+	out.WriteByte('\n')
+
+	for i, line := range wrapDockerPlain(command, 54) {
+		prefix := "  "
+		if i > 0 { prefix = "    " }
+		colored := line
+		if highlighted, err := SyntaxHighlight(line, "dockerfile"); err == nil {
+			colored = strings.TrimRight(highlighted, "\r\n")
+		}
+		out.WriteString(prefix)
+		out.WriteString(colored)
+		out.WriteByte('\n')
+	}
 	return out.String(), true
 }
 
@@ -207,62 +219,153 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 	child := s.children[key]
 	body := strings.TrimSpace(rawBody)
 
+	baseTool := s.stepTools[key]
 	tool := s.activeTools[key]
 	if detected := detectNestedDockerTool(body); detected != Generic && detected != Docker {
 		tool = detected
 		s.activeTools[key] = detected
 	}
 	if tool == Generic {
-		tool = s.stepTools[key]
+		tool = baseTool
+	}
+
+	if diag := ParseDiagnostic(tool, body); diag != nil && s.opts.Mode == Transform {
+		return renderDockerNestedDiagnostic(number, child, elapsed, tool, baseTool, diag, s.opts)
 	}
 
 	rendered := renderDockerNestedBody(tool, body, s.opts)
-	return renderDockerNestedStep(number, child, elapsed, tool, rendered, s.opts)
+	return renderDockerNestedStep(number, child, elapsed, tool, baseTool, rendered, s.opts)
 }
 
-func renderDockerNestedStep(number, child int, elapsed string, tool Tool, rendered string, opts Options) string {
-	lines := strings.Split(strings.TrimRight(rendered, "\r\n"), "\n")
-	if len(lines) == 0 {
-		lines = []string{""}
+func renderDockerNestedStep(number, child int, elapsed string, tool, baseTool Tool, rendered string, opts Options) string {
+	plain := strings.TrimSpace(ansiPattern.ReplaceAllString(rendered, ""))
+	if plain == "" {
+		return ""
 	}
 
-	branch := "  ├─ "
-	continuation := "  │  "
-	if opts.ASCIISymbols {
-		branch = "  +-- "
-		continuation = "  |   "
-	}
-
-	label := dockerChildLabelStyle.Render(fmt.Sprintf("%d.%d", number, child))
-	var head strings.Builder
-	head.WriteString(wrapANSI("2", branch))
-	labelColor := semanticColor(opts.SemanticColors.Code, "35")
-	head.WriteString(wrapANSI("1;"+labelColor, ansiPattern.ReplaceAllString(label, "")))
-
+	branch := "├"
+	if opts.ASCIISymbols { branch = "+" }
+	prefix := "  " + wrapANSI("2", branch) + " " + wrapANSI("2", fmt.Sprintf("%d.%d", number, child))
 	if elapsed != "" {
-		head.WriteString("  ")
-		head.WriteString(dimDockerDuration(elapsed + "s"))
+		prefix += "  " + dimDockerDuration(elapsed+"s")
 	}
-	if tool != Generic {
-		head.WriteString("  ")
-		head.WriteString(wrapANSI(semanticColor(opts.SemanticColors.Info, "36"), toolLabel(tool, opts)))
+	if tool != Generic && tool != baseTool {
+		prefix += "  " + wrapANSI(semanticColor(opts.SemanticColors.Info, "36"), "◆ "+toolName(tool))
 	}
-	if lines[0] != "" {
-		head.WriteString("  ")
-		head.WriteString(lines[0])
-	}
-	head.WriteByte('\n')
 
-	// Top-level step is depth 0, nested event depth 1, its continuation depth 2.
-	// Anything deeper is flattened into the depth-2 continuation column.
-	for _, line := range lines[1:] {
-		head.WriteString(dockerTreeBranchStyle.Render(continuation))
-		head.WriteString("   ")
-		head.WriteString(line)
-		head.WriteByte('\n')
+	width := 54
+	lines := wrapDockerPlain(plain, width)
+	var out strings.Builder
+	for i, line := range lines {
+		if i == 0 {
+			out.WriteString(prefix)
+			out.WriteString("  ")
+		} else {
+			cont := "  │   "
+			if opts.ASCIISymbols { cont = "  |   " }
+			out.WriteString(wrapANSI("2", cont))
+		}
+		out.WriteString(highlightLineWithColors(line, opts.SemanticColors))
+		out.WriteByte('\n')
 	}
-	return head.String()
+	return out.String()
 }
+
+func renderDockerNestedDiagnostic(number, child int, elapsed string, tool, baseTool Tool, d *Diagnostic, opts Options) string {
+	icons := resolveDiagnosticIcons(opts.DiagnosticIcons, !opts.ASCIISymbols)
+	errorColor := semanticColor(opts.SemanticColors.Error, "31")
+	infoColor := semanticColor(opts.SemanticColors.Info, "36")
+	codeColor := semanticColor(opts.SemanticColors.Code, "35")
+	locationColor := semanticColor(opts.SemanticColors.Location, "36")
+
+	branch := "├"
+	cont := "  │   "
+	if opts.ASCIISymbols {
+		branch = "+"
+		cont = "  |   "
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, "  %s %s", wrapANSI("2", branch), wrapANSI("2", fmt.Sprintf("%d.%d", number, child)))
+	if elapsed != "" {
+		fmt.Fprintf(&out, "  %s", dimDockerDuration(elapsed+"s"))
+	}
+	if tool != Generic && tool != baseTool {
+		fmt.Fprintf(&out, "  %s", wrapANSI(infoColor, "◆ "+toolName(tool)))
+	}
+	fmt.Fprintf(&out, "  %s", wrapANSI("1;"+errorColor, icons.Error))
+	if d.Code != "" {
+		fmt.Fprintf(&out, " %s", wrapANSI("1;"+codeColor, d.Code))
+	}
+	out.WriteByte('\n')
+
+	location := formatDiagnosticLocation(d)
+	if location != "" {
+		fmt.Fprintf(&out, "%s%s\n", wrapANSI("2", cont), wrapANSI(locationColor, location))
+	}
+	for _, line := range wrapDockerPlain(strings.TrimSpace(d.Message), 50) {
+		fmt.Fprintf(&out, "%s%s\n", wrapANSI("2", cont), highlightTypeScriptMessage(line, opts.SemanticColors))
+	}
+	if pair := tsTypePair.FindStringSubmatch(d.Message); pair != nil {
+		expected, received := highlightTypeDifference(pair[2], pair[1], opts.SemanticColors)
+		fmt.Fprintf(&out, "%s%s  %s  %s  %s\n",
+			wrapANSI("2", cont),
+			wrapANSI(semanticColor(opts.SemanticColors.Success, "32"), "Expected"),
+			expected,
+			wrapANSI(errorColor, "Received"),
+			received,
+		)
+	}
+	return out.String()
+}
+
+func toolName(tool Tool) string {
+	switch tool {
+	case TypeScript:
+		return "tsc"
+	case GoCompiler:
+		return "go"
+	default:
+		return string(tool)
+	}
+}
+
+func wrapDockerPlain(text string, width int) []string {
+	text = strings.TrimSpace(ansiPattern.ReplaceAllString(text, ""))
+	if text == "" {
+		return nil
+	}
+	if width < 16 {
+		width = 16
+	}
+	var lines []string
+	for _, paragraph := range strings.Split(text, "\n") {
+		words := strings.Fields(paragraph)
+		if len(words) == 0 {
+			continue
+		}
+		var current strings.Builder
+		for _, word := range words {
+			if current.Len() == 0 {
+				current.WriteString(word)
+				continue
+			}
+			if current.Len()+1+len(word) > width {
+				lines = append(lines, current.String())
+				current.Reset()
+				current.WriteString(word)
+				continue
+			}
+			current.WriteByte(' ')
+			current.WriteString(word)
+		}
+		if current.Len() > 0 {
+			lines = append(lines, current.String())
+		}
+	}
+	return lines
+}
+
 
 func dimDockerDuration(value string) string {
 	value = strings.TrimSpace(value)
@@ -392,6 +495,17 @@ func (s *dockerBuildSteps) padComposeService(service string) string {
 		s.composeMaxName = n
 	}
 	return service + strings.Repeat(" ", s.composeMaxName-n)
+}
+
+func (s *dockerBuildSteps) statusColor(status string) string {
+	switch status {
+	case "ERROR":
+		return s.colors.Error
+	case "CACHED":
+		return s.colors.Cached
+	default:
+		return s.colors.Done
+	}
 }
 
 func (s *dockerBuildSteps) renderStatus(status string) string {

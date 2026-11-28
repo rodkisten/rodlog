@@ -38,6 +38,10 @@ func isPNPMOutput(input string) bool {
 }
 
 func highlightPNPM(input string, opts Options) (string, bool) {
+	return highlightPNPMMode(input, opts, true)
+}
+
+func highlightPNPMMode(input string, opts Options, includeTool bool) (string, bool) {
 	colors := opts.SemanticColors
 	icons := resolveDiagnosticIcons(opts.DiagnosticIcons, !opts.ASCIISymbols)
 	trimmedRight := strings.TrimRight(input, "\r\n")
@@ -66,7 +70,9 @@ func highlightPNPM(input string, opts Options) (string, bool) {
 		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(success, "packages "+m[1]) + ending, true
 	}
 	if m := pnpmDone.FindStringSubmatch(line); m != nil {
-		return wrapANSI(success, icons.Success+" pnpm") + "  " + wrapANSI(success, "done") + " " + wrapANSI(muted, m[1]) + ending, true
+		prefix := ""
+		if includeTool { prefix = wrapANSI(success, icons.Success+" pnpm") + "  " }
+		return prefix + wrapANSI(success, icons.Success+" done") + " " + dimDockerDuration(m[1]) + ending, true
 	}
 	if m := pnpmScope.FindStringSubmatch(line); m != nil {
 		return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(muted, "scope") + " " + m[1] + ending, true
@@ -75,7 +81,9 @@ func highlightPNPM(input string, opts Options) (string, bool) {
 		return wrapANSI(success, "✓ pnpm") + "  " + line + ending, true
 	}
 	if strings.Contains(line, "peer dependencies") {
-		return wrapANSI(warning, icons.Warning+" pnpm") + "  " + line + ending, true
+		prefix := ""
+		if includeTool { prefix = wrapANSI(warning, icons.Warning+" pnpm") + "  " }
+		return prefix + wrapANSI(warning, icons.Warning+" "+line) + ending, true
 	}
 	if m := pnpmDiagnostic.FindStringSubmatch(line); m != nil {
 		level := warning
@@ -84,10 +92,19 @@ func highlightPNPM(input string, opts Options) (string, bool) {
 			level = semanticColor(colors.Error, "31")
 			symbol = icons.Error
 		}
-		return wrapANSI(level, symbol+" "+m[1]) + "  " + m[2] + ending, true
+		prefix := ""
+		if includeTool { prefix = wrapANSI(level, symbol+" pnpm") + "  " }
+		return prefix + wrapANSI(level, symbol+" "+m[1]) + "  " + m[2] + ending, true
 	}
 	// Store and deployment chatter is useful context but should stay quiet.
 	return wrapANSI(info, "◆ pnpm") + "  " + wrapANSI(muted, line) + ending, true
+}
+
+func pnpmPrefix(color string, opts Options, includeTool bool) string {
+	if !includeTool {
+		return ""
+	}
+	return wrapANSI(color, toolLabel(PNPM, opts)) + "  "
 }
 
 func pnpmProgressCount(input string) int {

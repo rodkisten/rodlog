@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -13,6 +12,7 @@ import (
 const (
 	defaultStepSeparatorWidth = 36
 	composeMaxServiceWidth    = 24
+	dockerMaxVisualDepth      = 2
 )
 
 var (
@@ -108,7 +108,8 @@ func (s *dockerBuildSteps) format(text string) (string, bool) {
 		if number, ok := s.numbers[m[1]]; ok {
 			statusText := s.renderStatus(m[2])
 			stepLabel := dockerStatusStepStyle.Render(fmt.Sprintf("STEP %d", number))
-			return fmt.Sprintf("%s  %s%s\n", stepLabel, statusText, m[3]), true
+			duration := dimDockerDurationSuffix(m[3])
+			return fmt.Sprintf("%s  %s%s\n", stepLabel, statusText, duration), true
 		}
 	}
 
@@ -165,6 +166,7 @@ func (s *dockerBuildSteps) tryFormatHeader(text string) (string, bool) {
 		return text, true
 	}
 
+	needsSeparator := s.next > 0
 	s.next++
 	s.numbers[key] = s.next
 	s.lastKey = key
@@ -185,26 +187,24 @@ func (s *dockerBuildSteps) tryFormatHeader(text string) (string, bool) {
 	if tool := s.stepTools[key]; tool != Generic {
 		badge += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolLabel(tool, s.opts))
 	}
-	sep := renderSGR(s.separator, s.colors.Separator)
-
 	coloredCmd := command
 	if highlighted, err := SyntaxHighlight(command, "dockerfile"); err == nil {
 		coloredCmd = strings.TrimRight(highlighted, "\r\n")
 	}
 
-	return fmt.Sprintf("%s  %s\n%s\n", badge, coloredCmd, sep), true
+	var out strings.Builder
+	if needsSeparator {
+		out.WriteString(renderSGR(s.separator, "2", s.colors.Separator))
+		out.WriteByte('\n')
+	}
+	fmt.Fprintf(&out, "%s  %s\n", badge, coloredCmd)
+	return out.String(), true
 }
 
 func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string {
 	number := s.numbers[key]
 	s.children[key]++
-
-	total := s.totals[key]
-	if total == "" {
-		total = strconv.Itoa(number)
-	}
-
-	label := fmt.Sprintf("STEP %d.%d/%s", number, s.children[key], total)
+	child := s.children[key]
 	body := strings.TrimSpace(rawBody)
 
 	tool := s.activeTools[key]
@@ -216,22 +216,69 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 		tool = s.stepTools[key]
 	}
 
-	branchGlyph := "  ╰── "
-	if s.opts.ASCIISymbols {
-		branchGlyph = "  +-- "
-	}
-	branch := dockerTreeBranchStyle.Render(branchGlyph)
-	styledLabel := dockerChildLabelStyle.Render(label)
-	if tool != Generic {
-		styledLabel += "  " + wrapANSI(semanticColor(s.opts.SemanticColors.Info, "36"), toolLabel(tool, s.opts))
+	rendered := renderDockerNestedBody(tool, body, s.opts)
+	return renderDockerNestedStep(number, child, elapsed, tool, rendered, s.opts)
+}
+
+func renderDockerNestedStep(number, child int, elapsed string, tool Tool, rendered string, opts Options) string {
+	lines := strings.Split(strings.TrimRight(rendered, "\r\n"), "\n")
+	if len(lines) == 0 {
+		lines = []string{""}
 	}
 
-	rendered := renderDockerNestedBody(tool, body, s.opts)
-	if elapsed != "" {
-		rendered = wrapANSI("2", elapsed+"s") + "  " + rendered
+	branch := "  ├─ "
+	continuation := "  │  "
+	if opts.ASCIISymbols {
+		branch = "  +-- "
+		continuation = "  |   "
 	}
-	return branch + styledLabel + "\n" + indentDockerNested(rendered, s.opts.ASCIISymbols) + "\n"
+
+	label := dockerChildLabelStyle.Render(fmt.Sprintf("%d.%d", number, child))
+	var head strings.Builder
+	head.WriteString(dockerTreeBranchStyle.Render(branch))
+	head.WriteString(label)
+
+	if elapsed != "" {
+		head.WriteString("  ")
+		head.WriteString(dimDockerDuration(elapsed + "s"))
+	}
+	if tool != Generic {
+		head.WriteString("  ")
+		head.WriteString(wrapANSI(semanticColor(opts.SemanticColors.Info, "36"), toolLabel(tool, opts)))
+	}
+	if lines[0] != "" {
+		head.WriteString("  ")
+		head.WriteString(lines[0])
+	}
+	head.WriteByte('\n')
+
+	// Top-level step is depth 0, nested event depth 1, its continuation depth 2.
+	// Anything deeper is flattened into the depth-2 continuation column.
+	for _, line := range lines[1:] {
+		head.WriteString(dockerTreeBranchStyle.Render(continuation))
+		head.WriteString("   ")
+		head.WriteString(line)
+		head.WriteByte('\n')
+	}
+	return head.String()
 }
+
+func dimDockerDuration(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return wrapANSI("2", value)
+}
+
+func dimDockerDurationSuffix(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return "  " + dimDockerDuration(value)
+}
+
 
 func detectDockerRunTool(command string) Tool {
 	command = strings.TrimSpace(command)
@@ -274,27 +321,16 @@ func renderDockerNestedBody(tool Tool, body string, opts Options) string {
 	if tool == Generic {
 		return strings.TrimRight(highlightLine(body), "\r\n")
 	}
+	if tool == PNPM {
+		if colored, ok := highlightPNPMMode(body, opts, false); ok {
+			return strings.TrimRight(colored, "\r\n")
+		}
+	}
 	if diag := ParseDiagnostic(tool, body); diag != nil && opts.Mode == Transform {
 		return strings.TrimRight(string(renderLinkedDiagnostic(diag, opts)), "\r\n")
 	}
 	event := Event{Tool: tool, Level: Classify(body), Text: body + "\n"}
 	return strings.TrimRight(string(Render(event, opts)), "\r\n")
-}
-
-func indentDockerNested(rendered string, ascii bool) string {
-	lines := strings.Split(strings.TrimRight(rendered, "\r\n"), "\n")
-	continuation := "     │ "
-	if ascii {
-		continuation = "     | "
-	}
-	for i := range lines {
-		if i == 0 {
-			lines[i] = "     " + lines[i]
-		} else {
-			lines[i] = continuation + lines[i]
-		}
-	}
-	return strings.Join(lines, "\n")
 }
 
 func (s *dockerBuildSteps) formatComposeLine(service, payload string) string {

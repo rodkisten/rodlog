@@ -72,14 +72,15 @@ func TestDockerBuildStatusError(t *testing.T) {
 }
 
 func TestDockerCustomSeparator(t *testing.T) {
-	input := "#1 [build 1/2] RUN echo hello\n"
+	input := "#1 [build 1/2] RUN echo hello\n#1 DONE 0.1s\n#2 [build 2/2] RUN echo world\n"
 	var output bytes.Buffer
 	engine := New(Options{Mode: Enhance, Tool: Docker, Color: true, DockerSeparator: "===="})
 	if err := engine.Process(context.Background(), strings.NewReader(input), &output); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), "====") || strings.Contains(output.String(), "────") {
-		t.Fatalf("custom divider not applied: %q", output.String())
+	plain := ansiPattern.ReplaceAllString(output.String(), "")
+	if strings.Count(plain, "====") != 1 || strings.Contains(plain, "────") {
+		t.Fatalf("custom divider must appear exactly once between top-level steps: %q", plain)
 	}
 }
 
@@ -216,7 +217,7 @@ func TestDockerNestedBuildKitOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
-	for _, expected := range []string{"STEP 1", "load build definition", "STEP 1.1/1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "STEP 3.1/3", "transferring context: 2B done", "STEP 7", "STEP 7.1/4", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1", "╰──"} {
+	for _, expected := range []string{"STEP 1", "load build definition", "1.1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "3.1", "transferring context: 2B done", "STEP 7", "7.1", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1", "╰──"} {
 		if !strings.Contains(plain, expected) {
 			t.Errorf("missing %q in output: %s", expected, plain)
 		}
@@ -228,7 +229,7 @@ func TestDockerInterleavedNestedOutput(t *testing.T) {
 	s.format("#8 [build 1/2] RUN echo hello\n")
 	s.format("#9 [build 2/2] RUN echo world\n")
 	got, ok := s.format("#8 0.2 hello\n")
-	if !ok || !strings.Contains(got, "STEP 1.1/2") || !strings.Contains(got, "0.2s") {
+	if !ok || !strings.Contains(got, "1.1") || !strings.Contains(got, "0.2s") {
 		t.Fatalf("nested step association: %q", got)
 	}
 }
@@ -295,5 +296,71 @@ func TestDockerNestedSymbolsRespectASCII(t *testing.T) {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing ASCII nested symbol %q in %q", want, plain)
 		}
+	}
+}
+
+
+func TestDockerSeparatorsOnlyBetweenTopLevelSteps(t *testing.T) {
+	input := strings.Join([]string{
+		"#14 [build 1/2] RUN pnpm install",
+		"#14 0.1 Progress: resolved 1, reused 0, downloaded 1, added 1",
+		"#14 0.2 Done in 0.2s",
+		"#14 DONE 0.3s",
+		"#17 [build 2/2] RUN pnpm build",
+		"#17 0.1 > tsc -p tsconfig.json",
+		"#17 DONE 0.4s",
+	}, "\n") + "\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	separator := strings.Repeat("─", defaultStepSeparatorWidth)
+	if got := strings.Count(plain, separator); got != 1 {
+		t.Fatalf("separator count=%d want 1:\n%s", got, plain)
+	}
+	firstDone := strings.Index(plain, "STEP 1  DONE")
+	sep := strings.Index(plain, separator)
+	second := strings.Index(plain, "STEP 2")
+	if firstDone < 0 || sep < firstDone || second < sep {
+		t.Fatalf("separator must sit between top-level steps:\n%s", plain)
+	}
+}
+
+func TestDockerDurationsAreAlwaysDimmed(t *testing.T) {
+	input := "#14 [build 1/1] RUN pnpm install\n#14 0.146 Progress: resolved 1, reused 0, downloaded 1, added 1\n#14 DONE 14.7s\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	raw := out.String()
+	for _, duration := range []string{"0.146s", "14.7s"} {
+		if !strings.Contains(raw, "\x1b[2m"+duration+"\x1b[0m") {
+			t.Fatalf("duration %q is not faint:\n%q", duration, raw)
+		}
+	}
+}
+
+func TestDockerNestedLayoutIsCompactAndDepthBounded(t *testing.T) {
+	input := strings.Join([]string{
+		"#17 [build 1/1] RUN pnpm build",
+		"#17 0.503 > tsc -p tsconfig.json",
+		"#17 0.800 src/index.ts(12,7): error TS2322: Type 'number' is not assignable to type 'string'.",
+	}, "\n") + "\n"
+	var out bytes.Buffer
+	if err := New(Options{Mode: Transform, Tool: Auto, Color: true, Detail: DetailCompact}).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, want := range []string{"├─ 1.1", "◆ tsc", "├─ 1.2", "TS2322"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("missing compact nested fragment %q:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "STEP 1.1") || strings.Contains(plain, "│  │") {
+		t.Fatalf("nested layout exceeded visual hierarchy:\n%s", plain)
+	}
+	if strings.Count(plain, "◆ pnpm") > 1 {
+		t.Fatalf("pnpm tool label duplicated inside nested body:\n%s", plain)
 	}
 }

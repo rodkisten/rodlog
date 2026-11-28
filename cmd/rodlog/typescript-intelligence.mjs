@@ -237,9 +237,13 @@ function signatureFromDeclaration(decl) {
 
 function focusRange(signature, focus, label) {
   if (!signature || !focus) return null;
-  const start = signature.indexOf(focus);
-  if (start < 0) return { focus, label };
-  return { focus, start, end: start + focus.length, label };
+  const utf16Start = signature.indexOf(focus);
+  if (utf16Start < 0) return { focus, label };
+  const utf16End = utf16Start + focus.length;
+  // Go slices strings by UTF-8 byte offsets, while JS indices are UTF-16 code units.
+  const start = Buffer.byteLength(signature.slice(0, utf16Start), 'utf8');
+  const end = Buffer.byteLength(signature.slice(0, utf16End), 'utf8');
+  return { focus, start, end, label };
 }
 
 function signatureParameterFocus(call, sig, pos, signature) {
@@ -359,7 +363,7 @@ function returnExpectationFocus(node) {
   const marker = ': ' + returnType;
   const pos = signature.lastIndexOf(marker);
   const focus = pos >= 0
-    ? { focus: returnType, start: pos + 2, end: pos + 2 + returnType.length, label: 'function returns this type' }
+    ? focusRange(signature, returnType, 'function returns this type')
     : focusRange(signature, returnType, 'function returns this type');
   return { declaration: fn, signature, focus };
 }

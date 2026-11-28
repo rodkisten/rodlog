@@ -140,3 +140,71 @@ func TestQuickFixPreviewRendering(t *testing.T) {
 		}
 	}
 }
+
+
+func TestLowConfidenceQuickFixesAreHiddenUnlessVerbose(t *testing.T) {
+	d := &Diagnostic{
+		Tool: TypeScript, Level: Error, Code: "TS2339", Message:"missing property",
+		Fixes: []DiagnosticFix{
+			{Description:"Declare property 'user'", Changes:[]DiagnosticTextChange{{File:"src/types.ts", NewText:"user: any;"}}},
+			{Description:"Add index signature for property 'user'", Changes:[]DiagnosticTextChange{{File:"src/types.ts", NewText:"[x: string]: any;"}}},
+		},
+	}
+	normal := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	if strings.Contains(normal, "user: any") || !strings.Contains(normal, "2 low-confidence quick fixes hidden") {
+		t.Fatalf("unsafe quick fixes leaked into normal detail: %q", normal)
+	}
+	verbose := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailVerbose,
+	)), "")
+	if !strings.Contains(verbose, "Low-confidence fix") || !strings.Contains(verbose, "user: any") {
+		t.Fatalf("verbose detail should expose low-confidence fix previews: %q", verbose)
+	}
+}
+
+func TestTypeScriptLongCompilerMessageIsCollapsedOutsideVerbose(t *testing.T) {
+	message := strings.Join([]string{
+		"No overload matches this call.",
+		"Overload 1 gave the following error.",
+		"detail 1",
+		"detail 2",
+		"detail 3",
+		"detail 4",
+		"detail 5",
+		"detail 6",
+		"detail 7",
+		"detail 8",
+		"detail 9",
+	}, "\n")
+	d := &Diagnostic{Tool:TypeScript, Level:Error, Code:"TS2769", Message:message}
+	normal := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	if !strings.Contains(normal, "3 more compiler lines · --detail=verbose") || strings.Contains(normal, "detail 9") {
+		t.Fatalf("normal detail did not collapse long compiler message: %q", normal)
+	}
+	verbose := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailVerbose,
+	)), "")
+	if !strings.Contains(verbose, "detail 9") || strings.Contains(verbose, "more compiler lines") {
+		t.Fatalf("verbose detail should retain full compiler message: %q", verbose)
+	}
+}
+
+func TestExpectedReceivedDoesNotRepeatCompareSuggestion(t *testing.T) {
+	d := &Diagnostic{
+		Tool:TypeScript, Level:Error, Code:"TS2322",
+		Message:"Type 'number' is not assignable to type 'string'.",
+	}
+	plain := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	if !strings.Contains(plain, "Expected: string") || !strings.Contains(plain, "Received: number") {
+		t.Fatalf("expected/received missing: %q", plain)
+	}
+	if strings.Contains(plain, "Compare the expected and actual types") {
+		t.Fatalf("redundant suggestion still rendered: %q", plain)
+	}
+}

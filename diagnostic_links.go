@@ -55,16 +55,13 @@ func renderLinkedDiagnostic(d *Diagnostic, opts Options) []byte {
  label:=formatDiagnosticLocation(d)
  displayFile:=d.DisplayFile
  if displayFile=="" { displayFile=d.File }
- linkLabel:=displayFile
- if d.Line>0 { linkLabel+=fmt.Sprintf(":%d",d.Line); if d.Column>0 { linkLabel+=fmt.Sprintf(":%d",d.Column) } }
- link:=fileHyperlinkLabel(d.File,linkLabel,d.Line,d.Column,opts)
+ link:=fileHyperlinkLabel(d.File,displayFile,d.Line,d.Column,opts)
  if label!=link { rendered=strings.Replace(rendered,label,link,1) }
  for _,related:=range d.Related {
   if related==nil || related.File=="" { continue }
   relatedLabel:=formatDiagnosticLocation(related)
   display:=related.DisplayFile
   if display=="" { display=related.File }
-  if related.Line>0 { display+=fmt.Sprintf(":%d",related.Line); if related.Column>0 { display+=fmt.Sprintf(":%d",related.Column) } }
   relatedLink:=fileHyperlinkLabel(related.File,display,related.Line,related.Column,opts)
   if relatedLabel!=relatedLink { rendered=strings.Replace(rendered,relatedLabel,relatedLink,1) }
  }

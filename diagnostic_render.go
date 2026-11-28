@@ -118,13 +118,19 @@ func renderDiagnosticWithDetail(d *Diagnostic, colors SemanticColors, icons Diag
 
 	message := strings.TrimSpace(d.Message)
 	if message != "" {
-		for _, line := range strings.Split(message, "\n") {
+		lines, hiddenMessageLines := diagnosticMessageLines(d, message, detail)
+		for _, line := range lines {
 			out.WriteString("  ")
 			if d.Tool == TypeScript {
 				line = highlightTypeScriptMessage(line, colors)
 			}
 			out.WriteString(line)
 			out.WriteByte('\n')
+		}
+		if hiddenMessageLines > 0 {
+			fmt.Fprintf(&out, "  %s\n",
+				wrapANSI("2", diagnosticCount(hiddenMessageLines, "more compiler line")+" · --detail=verbose"),
+			)
 		}
 	}
 
@@ -152,15 +158,17 @@ func renderDiagnosticWithDetail(d *Diagnostic, colors SemanticColors, icons Diag
 
 	infoColor := semanticColor(colors.Info, "36")
 
+	typePairRendered := false
 	if pair := tsTypePair.FindStringSubmatch(message); d.Tool == TypeScript && pair != nil && (d.Code == "TS2322" || d.Code == "TS2345") {
 		expected, received := highlightTypeDifference(pair[2], pair[1], colors)
 		fmt.Fprintf(&out, "  Expected: %s\n  Received: %s\n", expected, received)
+		typePairRendered = true
 	} else if explanation := diagnosticExplanation(d); explanation != "" {
 		prefix := iconOrDefault(icons.Explanation, "↳")
 		fmt.Fprintf(&out, "  %s\n", wrapANSI(infoColor, prefix+" "+explanation))
 	}
 
-	if suggestion := diagnosticSuggestion(d); suggestion != "" {
+	if suggestion := diagnosticSuggestion(d); suggestion != "" && !typePairRendered {
 		prefix := iconOrDefault(icons.Suggestion, "💡")
 		fmt.Fprintf(&out, "  %s\n", wrapANSI(infoColor, prefix+" "+suggestion))
 	}
@@ -181,7 +189,21 @@ func renderQuickFixes(out *strings.Builder, d *Diagnostic, colors SemanticColors
 		return
 	}
 
-	limit := len(d.Fixes)
+	fixes := d.Fixes
+	hiddenLowConfidence := 0
+	if detail != DetailVerbose {
+		filtered := make([]DiagnosticFix, 0, len(fixes))
+		for _, fix := range fixes {
+			if quickFixLowConfidence(fix) {
+				hiddenLowConfidence++
+				continue
+			}
+			filtered = append(filtered, fix)
+		}
+		fixes = filtered
+	}
+
+	limit := len(fixes)
 	switch detail {
 	case DetailCompact:
 		limit = min(limit, 1)
@@ -189,10 +211,13 @@ func renderQuickFixes(out *strings.Builder, d *Diagnostic, colors SemanticColors
 		limit = min(limit, 2)
 	}
 
-	for i, fix := range d.Fixes[:limit] {
+	for i, fix := range fixes[:limit] {
 		label := "Quick fix"
-		if len(d.Fixes) > 1 {
-			label = fmt.Sprintf("Quick fix %d/%d", i+1, len(d.Fixes))
+		if len(fixes) > 1 {
+			label = fmt.Sprintf("Quick fix %d/%d", i+1, len(fixes))
+		}
+		if detail == DetailVerbose && quickFixLowConfidence(fix) {
+			label = "Low-confidence fix"
 		}
 		fmt.Fprintf(out, "  %s %s: %s\n",
 			wrapANSI(semanticColor(colors.Warning, "33"), icons.Suggestion),
@@ -232,9 +257,50 @@ func renderQuickFixes(out *strings.Builder, d *Diagnostic, colors SemanticColors
 			fmt.Fprintf(out, "    %s\n", wrapANSI("2", diagnosticCount(len(fix.Changes)-changeLimit, "more edit")))
 		}
 	}
-	if limit < len(d.Fixes) {
-		fmt.Fprintf(out, "  %s\n", wrapANSI("2", diagnosticCount(len(d.Fixes)-limit, "more quick fix")+" · --detail=verbose"))
+	if limit < len(fixes) {
+		fmt.Fprintf(out, "  %s\n", wrapANSI("2", diagnosticCount(len(fixes)-limit, "more quick fix")+" · --detail=verbose"))
 	}
+	if hiddenLowConfidence > 0 {
+		fmt.Fprintf(out, "  %s\n",
+			wrapANSI("2", diagnosticCount(hiddenLowConfidence, "low-confidence quick fix")+" hidden · --detail=verbose"),
+		)
+	}
+}
+
+func quickFixLowConfidence(fix DiagnosticFix) bool {
+	description := strings.ToLower(fix.Description)
+	if strings.Contains(description, "add index signature") {
+		return true
+	}
+	for _, change := range fix.Changes {
+		text := strings.ToLower(change.NewText)
+		for _, risky := range []string{
+			": any", " as any", "<any>", "[x: string]: any", "[key: string]: any",
+		} {
+			if strings.Contains(text, risky) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func diagnosticMessageLines(d *Diagnostic, message string, detail DiagnosticDetail) ([]string, int) {
+	lines := strings.Split(message, "\n")
+	if d == nil || d.Tool != TypeScript || detail == DetailVerbose {
+		return lines, 0
+	}
+	limit := len(lines)
+	switch detail {
+	case DetailCompact:
+		limit = min(limit, 4)
+	default:
+		limit = min(limit, 8)
+	}
+	if len(lines) <= limit {
+		return lines, 0
+	}
+	return lines[:limit], len(lines) - limit
 }
 
 func renderFixTextChange(out *strings.Builder, change DiagnosticTextChange, colors SemanticColors, theme SyntaxTheme) {

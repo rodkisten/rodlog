@@ -217,7 +217,7 @@ func TestDockerNestedBuildKitOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	plain := ansiPattern.ReplaceAllString(out.String(), "")
-	for _, expected := range []string{"STEP 1", "load build definition", "1.1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "3.1", "transferring context: 2B done", "STEP 7", "7.1", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1", "╰──"} {
+	for _, expected := range []string{"STEP 1", "load build definition", "├─ 1.1", "transferring dockerfile: 615B done", "load metadata", "load .dockerignore", "├─ 3.1", "transferring context: 2B done", "STEP 7", "├─ 7.1", "npm ERR! code ERESOLVE", "STEP 4 ERROR", "exit code: 1"} {
 		if !strings.Contains(plain, expected) {
 			t.Errorf("missing %q in output: %s", expected, plain)
 		}

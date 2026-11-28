@@ -84,3 +84,24 @@ scripts/build-docker-typescript-fixture.sh \
 This fixture transports every enriched diagnostic from the Compiler API through
 a BuildKit-shaped stream. It is intentionally large and acts as a visual and
 semantic regression test for nested TypeScript diagnostics.
+
+
+## 💡 TypeScript Quick Fix previews
+
+The TypeScript Intelligence adapter also asks the TypeScript Language Service for
+code-fix actions. Fixes are **preview-only**: rodlog never edits source files in this
+mode.
+
+A diagnostic may include:
+
+```text
+✦ Quick fix: Change spelling to 'toUpperCase'
+  ⌖ src/errors-fixes.ts:3:24
+  - toUppercase
+  + toUpperCase
+```
+
+The same `fixes` data is preserved by `--transport=jsonl`, so a TypeScript
+diagnostic crossing Docker/BuildKit keeps its Language Service suggestions and edit
+preview. Applying fixes is intentionally a separate future command and is not enabled
+implicitly.

@@ -171,8 +171,110 @@ func renderDiagnosticWithDetail(d *Diagnostic, colors SemanticColors, icons Diag
 	for _, help := range d.Help {
 		fmt.Fprintf(&out, "  %s %s %s\n", wrapANSI(semanticColor(colors.Success, "32"), icons.Help), wrapANSI(semanticColor(colors.Success, "32"), "help:"), help)
 	}
+	renderQuickFixes(&out, d, colors, icons, theme, detail)
 	renderRelatedDiagnostics(&out, d, colors, icons, theme, detail)
 	return []byte(out.String())
+}
+
+func renderQuickFixes(out *strings.Builder, d *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme, detail DiagnosticDetail) {
+	if d == nil || len(d.Fixes) == 0 {
+		return
+	}
+
+	limit := len(d.Fixes)
+	switch detail {
+	case DetailCompact:
+		limit = min(limit, 1)
+	case DetailNormal:
+		limit = min(limit, 2)
+	}
+
+	for i, fix := range d.Fixes[:limit] {
+		label := "Quick fix"
+		if len(d.Fixes) > 1 {
+			label = fmt.Sprintf("Quick fix %d/%d", i+1, len(d.Fixes))
+		}
+		fmt.Fprintf(out, "  %s %s: %s\n",
+			wrapANSI(semanticColor(colors.Warning, "33"), icons.Suggestion),
+			wrapANSI("1", label),
+			fix.Description,
+		)
+
+		changeLimit := len(fix.Changes)
+		switch detail {
+		case DetailCompact:
+			changeLimit = min(changeLimit, 1)
+		case DetailNormal:
+			changeLimit = min(changeLimit, 2)
+		}
+
+		for _, change := range fix.Changes[:changeLimit] {
+			location := change.DisplayFile
+			if location == "" {
+				location = change.File
+			}
+			if change.Line > 0 {
+				location += ":" + strconv.Itoa(change.Line)
+				if change.Column > 0 {
+					location += ":" + strconv.Itoa(change.Column)
+				}
+			}
+			if location != "" {
+				fmt.Fprintf(out, "    %s %s\n",
+					wrapANSI(semanticColor(colors.Location, "36"), icons.Location),
+					wrapANSI("2", location),
+				)
+			}
+			renderFixTextChange(out, change, colors, theme)
+		}
+
+		if changeLimit < len(fix.Changes) {
+			fmt.Fprintf(out, "    %s\n", wrapANSI("2", diagnosticCount(len(fix.Changes)-changeLimit, "more edit")))
+		}
+	}
+	if limit < len(d.Fixes) {
+		fmt.Fprintf(out, "  %s\n", wrapANSI("2", diagnosticCount(len(d.Fixes)-limit, "more quick fix")+" · --detail=verbose"))
+	}
+}
+
+func renderFixTextChange(out *strings.Builder, change DiagnosticTextChange, colors SemanticColors, theme SyntaxTheme) {
+	oldLines := compactFixLines(change.OldText, 2)
+	newLines := compactFixLines(change.NewText, 2)
+	file := change.DisplayFile
+	if file == "" {
+		file = change.File
+	}
+
+	for _, line := range oldLines {
+		fmt.Fprintf(out, "    %s %s\n",
+			wrapANSI(semanticColor(colors.Error, "31"), "-"),
+			highlightSourceLine(line, file, theme),
+		)
+	}
+	for _, line := range newLines {
+		fmt.Fprintf(out, "    %s %s\n",
+			wrapANSI(semanticColor(colors.Success, "32"), "+"),
+			highlightSourceLine(line, file, theme),
+		)
+	}
+}
+
+func compactFixLines(text string, maxLines int) []string {
+	text = strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n"))
+	if text == "" {
+		return nil
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) > maxLines {
+		lines = append(lines[:maxLines], "…")
+	}
+	for i := range lines {
+		if len([]rune(lines[i])) > 96 {
+			runes := []rune(lines[i])
+			lines[i] = string(runes[:93]) + "…"
+		}
+	}
+	return lines
 }
 
 func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors SemanticColors, icons DiagnosticIcons, theme SyntaxTheme, detail DiagnosticDetail) {

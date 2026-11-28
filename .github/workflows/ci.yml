@@ -80,6 +80,8 @@ jobs:
           grep -q 'errors-control-flow.ts' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'expects this parameter' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'must satisfy this constraint' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'Quick fix' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'toUpperCase\|toFixed\|Implement interface' "$RUNNER_TEMP/typescript-intelligence.log"
 
           printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
       - name: "TypeScript intelligence: huge JSON transport through Docker"
@@ -107,6 +109,8 @@ jobs:
           grep -q 'Return type\|function returns this type' "$rendered"
           grep -q 'errors-generics.ts' "$rendered"
           grep -q 'errors-control-flow.ts' "$rendered"
+          grep -q 'Quick fix' "$rendered"
+          grep -q 'toUpperCase\|toFixed\|Implement interface' "$rendered"
 
           printf '\nValidated %s enriched TypeScript diagnostics through the Docker transport.\n' "$diagnostics"
 

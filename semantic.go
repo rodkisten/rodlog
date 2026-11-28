@@ -8,6 +8,25 @@ import (
 	"strings"
 )
 
+type DiagnosticTextChange struct {
+	File        string `json:"file"`
+	DisplayFile string `json:"display_file,omitempty"`
+	Line        int    `json:"line,omitempty"`
+	Column      int    `json:"column,omitempty"`
+	EndLine     int    `json:"end_line,omitempty"`
+	EndColumn   int    `json:"end_column,omitempty"`
+	OldText     string `json:"old_text,omitempty"`
+	NewText     string `json:"new_text,omitempty"`
+}
+
+type DiagnosticFix struct {
+	Description       string                 `json:"description"`
+	FixName           string                 `json:"fix_name,omitempty"`
+	FixID             string                 `json:"fix_id,omitempty"`
+	FixAllDescription string                 `json:"fix_all_description,omitempty"`
+	Changes           []DiagnosticTextChange `json:"changes,omitempty"`
+}
+
 type Diagnostic struct {
 	Tool    Tool   `json:"tool"`
 	Level   Level  `json:"level"`
@@ -30,6 +49,7 @@ type Diagnostic struct {
  SignatureFocusEnd int `json:"signature_focus_end,omitempty"`
  SignatureFocusLabel string `json:"signature_focus_label,omitempty"`
  Documentation string `json:"documentation,omitempty"`
+ Fixes []DiagnosticFix `json:"fixes,omitempty"`
 }
 
 var (

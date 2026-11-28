@@ -111,3 +111,32 @@ func TestExpectedPropertyFocusLabel(t *testing.T) {
 		t.Fatalf("unexpected property focus output: %q", plain)
 	}
 }
+
+
+func TestQuickFixPreviewRendering(t *testing.T) {
+	d := &Diagnostic{
+		Tool: TypeScript, Level: Error, Code: "TS2551", File: "src/fix.ts", Line: 3, Column: 15,
+		Message: "Property 'toUppercase' does not exist on type 'string'. Did you mean 'toUpperCase'?",
+		Fixes: []DiagnosticFix{{
+			Description: "Change spelling to 'toUpperCase'",
+			FixName: "spelling",
+			Changes: []DiagnosticTextChange{{
+				File:"src/fix.ts", Line:3, Column:15,
+				OldText:"toUppercase", NewText:"toUpperCase",
+			}},
+		}},
+	}
+	plain := ansiPattern.ReplaceAllString(string(renderDiagnosticWithDetail(
+		d, SemanticColors{}, resolveDiagnosticIcons(DiagnosticIcons{}, true), SyntaxTheme{}, DetailNormal,
+	)), "")
+	for _, want := range []string{
+		"✦ Quick fix: Change spelling to 'toUpperCase'",
+		"⌖ src/fix.ts:3:15",
+		"- toUppercase",
+		"+ toUpperCase",
+	} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("missing quick-fix preview %q in %q", want, plain)
+		}
+	}
+}

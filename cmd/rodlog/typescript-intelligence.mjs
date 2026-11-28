@@ -196,6 +196,80 @@ const program = ts.createProgram({
 });
 const checker = program.getTypeChecker();
 
+const languageService = ts.createLanguageService({
+  getCompilationSettings: () => ({ ...parsed.options, noEmit: true }),
+  getScriptFileNames: () => parsed.fileNames,
+  getScriptVersion: () => '0',
+  getScriptSnapshot: fileName => {
+    const text = ts.sys.readFile(fileName);
+    return text === undefined ? undefined : ts.ScriptSnapshot.fromString(text);
+  },
+  getCurrentDirectory: () => projectDir,
+  getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
+  fileExists: ts.sys.fileExists,
+  readFile: ts.sys.readFile,
+  readDirectory: ts.sys.readDirectory,
+  directoryExists: ts.sys.directoryExists,
+  getDirectories: ts.sys.getDirectories,
+  realpath: ts.sys.realpath,
+  useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
+  getNewLine: () => ts.sys.newLine,
+}, ts.createDocumentRegistry());
+
+function sourceFileForFix(fileName) {
+  const existing = program.getSourceFile(fileName);
+  if (existing) return existing;
+  const text = ts.sys.readFile(fileName);
+  if (text === undefined) return undefined;
+  return ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true);
+}
+
+function textChangeLocation(fileName, change) {
+  const source = sourceFileForFix(fileName);
+  const text = source?.getFullText() ?? ts.sys.readFile(fileName) ?? '';
+  const start = change.span.start;
+  const end = start + change.span.length;
+  const startPos = source?.getLineAndCharacterOfPosition(start) ?? { line: 0, character: start };
+  const endPos = source?.getLineAndCharacterOfPosition(end) ?? startPos;
+  return {
+    file: path.relative(process.cwd(), fileName),
+    display_file: displayPath(fileName),
+    line: startPos.line + 1,
+    column: startPos.character + 1,
+    end_line: endPos.line + 1,
+    end_column: endPos.character + 1,
+    old_text: text.slice(start, end),
+    new_text: change.newText,
+  };
+}
+
+function quickFixesForDiagnostic(d) {
+  if (!d.file || d.start === undefined || typeof languageService?.getCodeFixesAtPosition !== 'function') {
+    return [];
+  }
+  try {
+    const actions = languageService.getCodeFixesAtPosition(
+      d.file.fileName,
+      d.start,
+      d.start + (d.length || 1),
+      [d.code],
+      {},
+      {},
+    );
+    return actions.slice(0, 5).map(action => ({
+      description: action.description,
+      fix_name: action.fixName,
+      fix_id: action.fixId || '',
+      fix_all_description: action.fixAllDescription || '',
+      changes: action.changes.flatMap(change =>
+        change.textChanges.map(textChange => textChangeLocation(change.fileName, textChange))
+      ),
+    })).filter(fix => fix.changes.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 function enclosingCall(node, pos) {
   if (pos < node.getFullStart() || pos >= node.getEnd()) return;
   return ts.forEachChild(node, child => enclosingCall(child, pos))
@@ -507,6 +581,8 @@ for (const d of diagnostics) {
       }
     }
   }
+  const fixes = quickFixesForDiagnostic(d);
+  if (fixes.length) result.fixes = fixes;
   emit(result);
 }
 

@@ -11,6 +11,10 @@ func TestDetectCommand(t *testing.T) {
 		{[]string{"npx", "--yes", "tsc", "--noEmit"}, TypeScript},
 		{[]string{"npx", "wrangler", "deploy"}, Wrangler},
 		{[]string{"docker", "build", "."}, Docker},
+		{[]string{"pnpm", "--filter", "@rodsandbox/runtime-agent...", "install", "--frozen-lockfile"}, PNPM},
+		{[]string{"pnpm", "exec", "tsc", "--noEmit"}, TypeScript},
+		{[]string{"pnpm", "--filter", "web", "exec", "tsc", "--noEmit"}, TypeScript},
+		{[]string{"corepack", "pnpm", "install"}, PNPM},
 		{[]string{"echo", "gcloud error"}, Generic},
 		{nil, Generic},
 	}

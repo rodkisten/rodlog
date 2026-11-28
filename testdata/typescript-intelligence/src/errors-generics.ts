@@ -8,6 +8,7 @@ function attach<T extends { id: string }>(value: T): WithId<T> {
 
 const noId = attach({ name: "missing" });
 const wrongId = attach({ id: 123, name: "wrong" });
+type InvalidWithId = WithId<{ name: string }>;
 
 function first<T>(values: readonly T[]): T {
   return values[0];
@@ -42,6 +43,7 @@ const symbolValue: Serializable = Symbol("nope");
 
 void noId;
 void wrongId;
+type _KeepInvalidWithId = InvalidWithId;
 void firstNumber;
 void impossibleScore;
 void query;

@@ -6,7 +6,15 @@ import (
 	"strings"
 )
 
-var pnpmDiagnostic = regexp.MustCompile(`^(?:\s|\x{2009})*(ERR_PNPM_[A-Z0-9_]+|WARN)(?:\s|\x{2009})+(.+)$`)
+var pnpmDiagnostic = regexp.MustCompile(`^(?:\s|\x{2009})*(ERR_PNPM_[A-Z0-9_]+|WARN(?:_PNPM_[A-Z0-9_]+)?)(?:\s|\x{2009})+(.+)package rodlog
+
+import (
+	"encoding/json"
+	"regexp"
+	"strings"
+)
+
+)
 var goDiagnostic = regexp.MustCompile(`^(.+\.go):(\d+):(\d+):\s*(.+)$`)
 
 type rustSpan struct {

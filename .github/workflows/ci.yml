@@ -73,6 +73,7 @@ jobs:
           grep -q 'errors-generics.ts' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'errors-control-flow.ts' "$RUNNER_TEMP/typescript-intelligence.log"
           grep -q 'expects this parameter' "$RUNNER_TEMP/typescript-intelligence.log"
+          grep -q 'must satisfy this constraint' "$RUNNER_TEMP/typescript-intelligence.log"
 
           printf '\nValidated %s rendered TypeScript diagnostic references from the huge fixture.\n' "$diagnostics"
       - name: Shell hook checks
@@ -98,6 +99,13 @@ jobs:
           set -euo pipefail
           test -x "$RUNNER_TEMP/rodlog"
           "$RUNNER_TEMP/rodlog" --color=always --tool=docker --output=terminal < testdata/docker.log
+      - name: "Fixture preview: Docker nested pnpm + TypeScript"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$RUNNER_TEMP/rodlog"
+          "$RUNNER_TEMP/rodlog" --color=always --mode=transform --tool=auto --detail=compact < testdata/docker-pnpm.log
       - name: "Fixture preview: typescript"
         if: ${{ !cancelled() }}
         shell: bash

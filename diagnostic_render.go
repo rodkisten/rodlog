@@ -291,6 +291,8 @@ func renderRelatedDiagnostics(out *strings.Builder, parent *Diagnostic, colors S
 			label := "Defined here"
 			lower := strings.ToLower(item.Message)
 			switch {
+			case strings.Contains(lower, "generic constraint"):
+				label = "Generic constraint"
 			case strings.Contains(lower, "expected property"):
 				label = "Expected property"
 			case strings.Contains(lower, "return type"):
@@ -372,6 +374,8 @@ func relatedPriority(item *Diagnostic) int {
 	}
 	lower := strings.ToLower(item.Message)
 	switch {
+	case strings.Contains(lower, "generic constraint"):
+		return 0
 	case strings.Contains(lower, "expected property"):
 		return 0
 	case strings.Contains(lower, "return type"):

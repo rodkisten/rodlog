@@ -261,6 +261,50 @@ function signatureParameterFocus(call, sig, pos, signature) {
   return focusRange(signature, focus, `argument ${index + 1} expects this parameter`);
 }
 
+function genericConstraintFocus(node, pos) {
+  for (let current = node; current; current = current.parent) {
+    const typeArguments = current.typeArguments;
+    if (!typeArguments?.length) {
+      if (ts.isSourceFile(current)) break;
+      continue;
+    }
+    const index = typeArguments.findIndex(argument => pos >= argument.getFullStart() && pos < argument.getEnd());
+    if (index < 0) continue;
+
+    let declaration;
+    let symbol;
+    if (ts.isTypeReferenceNode(current)) {
+      symbol = checker.getSymbolAtLocation(current.typeName);
+      if (symbol?.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+      declaration = symbol?.getDeclarations()?.find(decl => decl.typeParameters?.length > index);
+    } else if (ts.isCallExpression(current) || ts.isNewExpression(current)) {
+      const signature = checker.getResolvedSignature(current);
+      declaration = signature?.getDeclaration();
+      symbol = declaration?.name ? checker.getSymbolAtLocation(declaration.name) : undefined;
+    }
+    const parameter = declaration?.typeParameters?.[index];
+    const constraint = parameter?.constraint;
+    if (!parameter || !constraint || !isProjectFile(declaration.getSourceFile().fileName)) continue;
+
+    const file = declaration.getSourceFile();
+    const typeParams = declaration.typeParameters.map(param => param.getText(file)).join(", ");
+    const name = declaration.name?.getText(file) || checker.symbolToString(symbol);
+    let signature = name + "<" + typeParams + ">";
+    if (ts.isTypeAliasDeclaration(declaration)) signature = "type " + signature;
+    else if (ts.isInterfaceDeclaration(declaration)) signature = "interface " + signature;
+    else if (ts.isFunctionDeclaration(declaration) || ts.isMethodDeclaration(declaration)) signature = "function " + signature;
+
+    const focusText = parameter.getText(file);
+    return {
+      declaration,
+      symbol,
+      signature,
+      focus: focusRange(signature, focusText, `type argument ${index + 1} must satisfy this constraint`),
+    };
+  }
+  return null;
+}
+
 function enclosingPropertyAssignment(node) {
   for (let current = node; current; current = current.parent) {
     if (ts.isPropertyAssignment(current) || ts.isShorthandPropertyAssignment(current)) return current;
@@ -394,6 +438,25 @@ for (const d of diagnostics) {
 
     const node = deepestNode(d.file, d.start);
     if (node) {
+      const constraintFocus = genericConstraintFocus(node, d.start);
+      if (constraintFocus) {
+        const file = constraintFocus.declaration.getSourceFile();
+        const p = file.getLineAndCharacterOfPosition(constraintFocus.declaration.getStart());
+        (result.related ??= []).push({
+          tool: 'typescript', level: 'info',
+          file: path.relative(process.cwd(), file.fileName),
+          display_file: displayPath(file.fileName),
+          line: p.line + 1, column: p.character + 1,
+          message: 'Generic constraint declared here',
+          signature: constraintFocus.signature,
+          signature_focus: constraintFocus.focus?.focus || '',
+          signature_focus_start: constraintFocus.focus?.start ?? 0,
+          signature_focus_end: constraintFocus.focus?.end ?? 0,
+          signature_focus_label: constraintFocus.focus?.label || '',
+          documentation: constraintFocus.symbol ? ts.displayPartsToString(constraintFocus.symbol.getDocumentationComment(checker)) : '',
+        });
+      }
+
       const propertyFocus = propertyExpectationFocus(node);
       if (propertyFocus && isProjectFile(propertyFocus.declaration.getSourceFile().fileName)) {
         const file = propertyFocus.declaration.getSourceFile();

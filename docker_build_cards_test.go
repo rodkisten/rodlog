@@ -232,3 +232,48 @@ func TestDockerInterleavedNestedOutput(t *testing.T) {
 		t.Fatalf("nested step association: %q", got)
 	}
 }
+
+
+func TestDockerNestedPNPMAndTypeScriptTools(t *testing.T) {
+	input := strings.Join([]string{
+		"#14 [build 7/9] RUN pnpm --filter @rodsandbox/runtime-agent... install --frozen-lockfile --ignore-scripts",
+		"#14 1.512 Lockfile is up to date, resolution step is skipped",
+		"#14 2.616 Progress: resolved 946, reused 0, downloaded 70, added 60",
+		"#14 6.190 WARN 10 deprecated subdependencies found",
+		"#14 12.48 Done in 11.5s",
+		"#14 DONE 14.7s",
+		"#17 [build 9/9] RUN pnpm --filter @rodsandbox/runtime-agent build",
+		"#17 0.503 > @rodsandbox/runtime-agent@0.1.0 build /source/packages/runtime-agent",
+		"#17 0.503 > tsc -p tsconfig.json",
+		"#17 0.800 packages/runtime-agent/src/index.ts(12,7): error TS2322: Type 'number' is not assignable to type 'string'.",
+		"#17 ERROR 1.0s",
+	}, "\n") + "\n"
+	var out bytes.Buffer
+	opts := Options{Mode: Transform, Tool: Auto, Color: true, Detail: DetailCompact}
+	if err := New(opts).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	plain := ansiPattern.ReplaceAllString(out.String(), "")
+	for _, want := range []string{
+		"STEP 1", "◆ pnpm", "Lockfile is up to date", "resolved", "946", "done", "11.5s",
+		"STEP 2", "◆ tsc", "TS2322", "Expected:", "Received:",
+	} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("missing %q in nested Docker output:\n%s", want, plain)
+		}
+	}
+}
+
+func TestDetectDockerRunToolUsesShellAST(t *testing.T) {
+	for _, tc := range []struct{ command string; want Tool }{
+		{"RUN pnpm --filter app install --frozen-lockfile", PNPM},
+		{"RUN corepack pnpm install", PNPM},
+		{"RUN pnpm exec tsc --noEmit", TypeScript},
+		{"RUN echo ok && pnpm install", PNPM},
+		{"COPY package.json ./", Generic},
+	} {
+		if got := detectDockerRunTool(tc.command); got != tc.want {
+			t.Errorf("detectDockerRunTool(%q)=%s want %s", tc.command, got, tc.want)
+		}
+	}
+}

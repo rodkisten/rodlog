@@ -1,0 +1,18 @@
+# runtime-agent inspired nested Docker + pnpm fixture
+#0 building with "builder-fixture" instance using docker-container driver
+#14 [build 7/9] RUN pnpm --filter @rodsandbox/runtime-agent... install --frozen-lockfile --ignore-scripts
+#14 0.146 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-8.15.9.tgz
+#14 1.433 (node:1) [DEP0169] DeprecationWarning: url.parse() behavior is not standardized
+#14 1.512 Lockfile is up to date, resolution step is skipped
+#14 1.614 Progress: resolved 1, reused 0, downloaded 0, added 0
+#14 2.616 Progress: resolved 946, reused 0, downloaded 70, added 60
+#14 6.190 WARN 10 deprecated subdependencies found
+#14 11.89 Progress: resolved 946, reused 0, downloaded 946, added 946, done
+#14 12.48 Done in 11.5s
+#14 DONE 14.7s
+#17 [build 9/9] RUN pnpm --filter @rodsandbox/runtime-agent build && pnpm --filter @rodsandbox/runtime-agent deploy --prod /bundle
+#17 0.503 > @rodsandbox/runtime-agent@0.1.0 build /source/packages/runtime-agent
+#17 0.503 > tsc -p tsconfig.json
+#17 0.800 packages/runtime-agent/src/index.ts(12,7): error TS2322: Type 'number' is not assignable to type 'string'.
+#17 1.100 ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL @rodsandbox/runtime-agent@0.1.0 build: tsc -p tsconfig.json
+#17 ERROR 1.2s

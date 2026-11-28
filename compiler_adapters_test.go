@@ -13,6 +13,8 @@ func TestCompilerAdapters(t *testing.T) {
 	for _, tc := range []struct{ input string; tool Tool }{
 		{"./main.go:12:8: undefined: name", GoCompiler},
 		{"ERR_PNPM_OUTDATED_LOCKFILE Cannot install", PNPM},
+		{"Progress: resolved 946, reused 0, downloaded 945, added 945", PNPM},
+		{"Lockfile is up to date, resolution step is skipped", PNPM},
 	} {
 		if d := ParseDiagnostic(Auto, tc.input); d == nil || d.Tool != tc.tool { t.Errorf("invalid diagnostic for %q: %#v", tc.input, d) }
 	}

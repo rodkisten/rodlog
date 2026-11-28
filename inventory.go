@@ -14,6 +14,7 @@ type ToolSpec struct {
 func ToolInventory() []ToolSpec {
 	return []ToolSpec{
 		{Tool: NPM, Commands: []string{"npm", "npm.cmd"}, Description: "npm package manager"},
+		{Tool: PNPM, Commands: []string{"pnpm", "pnpm.cmd"}, Description: "pnpm package manager and workspace runner"},
 		{Tool: TypeScript, Commands: []string{"tsc"}, Description: "TypeScript compiler"},
 		{Tool: GCloud, Commands: []string{"gcloud"}, Description: "Google Cloud CLI"},
 		{Tool: Wrangler, Commands: []string{"wrangler"}, Description: "Cloudflare Wrangler"},
@@ -35,6 +36,27 @@ func DetectCommand(argv []string) Tool {
 			}
 		}
 		return Generic
+	}
+	if name == "corepack" || name == "corepack.exe" {
+		if len(argv) > 1 {
+			return DetectCommand(argv[1:])
+		}
+		return Generic
+	}
+	if name == "pnpm" || name == "pnpm.cmd" {
+		for i, arg := range argv[1:] {
+			if arg != "exec" && arg != "dlx" {
+				continue
+			}
+			for _, nested := range argv[i+2:] {
+				if strings.HasPrefix(nested, "-") {
+					continue
+				}
+				return DetectCommand([]string{nested})
+			}
+			return PNPM
+		}
+		return PNPM
 	}
 	if name == "npx" || name == "npx.cmd" || name == "bunx" {
 		for _, arg := range argv[1:] {

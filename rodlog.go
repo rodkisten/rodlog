@@ -119,7 +119,7 @@ var toolPatterns = map[Tool][]string{
 
 func Detect(s string) Tool {
 	if parseRustDiagnostic(s) != nil { return Rust }
-	if pnpmDiagnostic.MatchString(strings.TrimSpace(ansi.Strip(s))) { return PNPM }
+	if isPNPMOutput(s) { return PNPM }
 	if goDiagnostic.MatchString(strings.TrimSpace(ansi.Strip(s))) { return GoCompiler }
 	if m := buildKitHeader.FindStringSubmatch(s); m != nil {
 		if buildKitInstruction.MatchString(m[3]) || strings.HasPrefix(m[2], "internal") {
@@ -256,6 +256,7 @@ type streamProcessor struct {
 
 func newStreamProcessor(opts Options, renderer Renderer, dst io.Writer) *streamProcessor {
 	steps := newDockerBuildSteps()
+	steps.opts = opts
 	if colors, err := ParseDockerColors(opts.DockerColors); err == nil {
 		steps.colors = colors
 	}
@@ -546,6 +547,11 @@ func Render(ev Event, opts Options) []byte {
 			return []byte(colored)
 		}
 	}
+	if ev.Tool == PNPM {
+		if colored, ok := highlightPNPM(text, opts.SemanticColors); ok {
+			return []byte(colored)
+		}
+	}
 
 	trimmedRight := strings.TrimRight(text, "\r\n")
 	lineEnding := text[len(trimmedRight):]
@@ -583,7 +589,7 @@ func Render(ev Event, opts Options) []byte {
 
 func isPresetSupportedTool(tool Tool) bool {
 	switch tool {
-	case GCloud, Wrangler, Docker, TypeScript:
+	case GCloud, Wrangler, Docker, TypeScript, PNPM:
 		return true
 	default:
 		return false

@@ -418,3 +418,48 @@ func TestDockerNestedStructuredTypeScriptDiagnosticUsesCanonicalRenderer(t *test
 		}
 	}
 }
+
+
+func TestDockerNestedPNPMPreservesSemanticColors(t *testing.T) {
+	input := "#14 [build 1/1] RUN pnpm install\n#14 0.1 Progress: resolved 946, reused 12, downloaded 34, added 56\n"
+	var out bytes.Buffer
+	opts := Options{
+		Mode: Transform,
+		Tool: Auto,
+		Color: true,
+		SemanticColors: SemanticColors{
+			Info: "38;2;10;20;30",
+			Success: "38;2;40;50;60",
+			Muted: "38;2;70;80;90",
+		},
+	}
+	if err := New(opts).Process(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	raw := out.String()
+	for _, want := range []string{
+		"\x1b[38;2;70;80;90mresolved\x1b[0m",
+		"\x1b[38;2;10;20;30m946\x1b[0m",
+		"\x1b[38;2;70;80;90m· reused\x1b[0m",
+		"\x1b[38;2;40;50;60m12\x1b[0m",
+		"\x1b[38;2;70;80;90m· downloaded\x1b[0m",
+		"\x1b[38;2;10;20;30m34\x1b[0m",
+		"\x1b[38;2;70;80;90m· added\x1b[0m",
+		"\x1b[38;2;40;50;60m56\x1b[0m",
+	} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("nested pnpm color %q was stripped:\n%q", want, raw)
+		}
+	}
+}
+
+func TestDockerNestedANSIWrapPreservesHyperlinksAndColors(t *testing.T) {
+	rendered := "\x1b[36mhello\x1b[0m \x1b]8;;https://example.com\x1b\\example-link\x1b]8;;\x1b\\"
+	got := renderDockerNestedStep(1, 1, "0.1", PNPM, PNPM, rendered, Options{Color:true})
+	if !strings.Contains(got, "\x1b[36mhello\x1b[0m") {
+		t.Fatalf("ANSI color was stripped: %q", got)
+	}
+	if !strings.Contains(got, "\x1b]8;;https://example.com\x1b\\") {
+		t.Fatalf("OSC8 hyperlink was stripped: %q", got)
+	}
+}

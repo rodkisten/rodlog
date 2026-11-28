@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 const (
@@ -239,9 +240,12 @@ func (s *dockerBuildSteps) formatChildLine(key, elapsed, rawBody string) string 
 }
 
 func renderDockerNestedStep(number, child int, elapsed string, tool, baseTool Tool, rendered string, opts Options) string {
-	plain := strings.TrimSpace(ansiPattern.ReplaceAllString(rendered, ""))
-	if plain == "" {
+	styled := strings.TrimSpace(rendered)
+	if styled == "" {
 		return ""
+	}
+	if !ansiPattern.MatchString(styled) {
+		styled = highlightLineWithColors(styled, opts.SemanticColors)
 	}
 
 	branch := "├"
@@ -254,8 +258,12 @@ func renderDockerNestedStep(number, child int, elapsed string, tool, baseTool To
 		prefix += "  " + wrapANSI(semanticColor(opts.SemanticColors.Info, "36"), "◆ "+toolName(tool))
 	}
 
-	width := 54
-	lines := wrapDockerPlain(plain, width)
+	// ANSI-aware wrapping preserves SGR colors and OSC8 hyperlinks emitted by
+	// nested tool renderers. Never strip/re-highlight here: Docker owns only
+	// hierarchy and indentation, while pnpm/TypeScript own their semantics.
+	wrapped := ansi.Wrap(styled, 54, "/:@")
+	lines := strings.Split(wrapped, "\n")
+
 	var out strings.Builder
 	for i, line := range lines {
 		if i == 0 {
@@ -266,7 +274,7 @@ func renderDockerNestedStep(number, child int, elapsed string, tool, baseTool To
 			if opts.ASCIISymbols { cont = "  |   " }
 			out.WriteString(wrapANSI("2", cont))
 		}
-		out.WriteString(highlightLineWithColors(line, opts.SemanticColors))
+		out.WriteString(line)
 		out.WriteByte('\n')
 	}
 	return out.String()
